@@ -7,13 +7,19 @@ defmodule Forex.MixProject do
       version: "0.1.0",
       elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      aliases: aliases(),
+      deps: deps(),
+      dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
+        plt_add_apps: [:mix, :ex_unit]
+      ]
     ]
   end
 
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
+      mod: {Forex.Application, [strategy: :one_for_one, name: Forex.Supervisor]},
       extra_applications: [:logger]
     ]
   end
@@ -22,10 +28,15 @@ defmodule Forex.MixProject do
   defp deps do
     [
       {:req, "~> 0.4"},
-      {:nebulex, "~> 2.6"},
+      {:decimal, "~> 2.1"},
       {:sweet_xml, "~> 0.7"},
-      {:benchee, "~> 1.3", only: :dev},
+      {:nimble_options, "~> 1.1"},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.31", only: [:dev, :docs]}
     ]
+  end
+
+  defp aliases do
+    []
   end
 end

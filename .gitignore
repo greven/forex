@@ -81,6 +81,7 @@ npm-debug.log
 
 # Elixir
 .elixir_ls/
+/priv/plts/
 
 # Other
 tmp
