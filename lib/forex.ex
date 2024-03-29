@@ -1,9 +1,4 @@
 defmodule Forex do
-  # TODO: Add option to use cache or not
-  # TODO: Add option to set the cache TTL
-  # TODO: Check if the cache is setup if not don't use it
-  # TODO: Add instructions on how to add the cache to the supervision tree
-
   @moduledoc """
   `Forex` is a simple Elixir library that serves as a wrapper to the
   foreign exchange reference rates provided by the European Central Bank.
@@ -44,18 +39,24 @@ defmodule Forex do
   @type currency_code :: String.t() | atom()
   @type rate :: %{currency_code() => Decimal.t() | String.t()}
 
-  @options_schema NimbleOptions.new!(
-                    format: [type: :atom, default: :decimal],
-                    base: [type: :string, default: "EUR"],
-                    cache: [
-                      type: :boolean,
-                      default: Application.compile_env(:forex, :use_cache, false)
-                    ]
-                  )
-
-  alias Forex.Cache
+  alias Forex.Fetcher
   alias Forex.Currency
-  alias Forex.Feed
+  alias Forex.Formatter
+
+  ## Options
+
+  defp options_schema do
+    NimbleOptions.new!(
+      base: [type: :string, default: "EUR"],
+      format: [type: :atom, default: :decimal]
+    )
+  end
+
+  def options(opts \\ []) do
+    NimbleOptions.validate!(opts, options_schema())
+  end
+
+  ## Guards
 
   @doc false
   defguard is_currency_code(currency_code)
@@ -63,8 +64,14 @@ defmodule Forex do
 
   ## Currencies
 
+  @doc """
+  Return a list of all available currencies ISO 4217 codes.
+  """
   def available_currencies, do: Currency.all() |> Map.keys()
 
+  @doc """
+  Return a list of all available currencies.
+  """
   def list_currencies, do: Currency.all()
 
   def get_currency(currency_code) when is_currency_code(currency_code) do
@@ -119,13 +126,13 @@ defmodule Forex do
   """
   @spec current_rates(keyword) :: {:ok, rate()} | {:error, term}
   def current_rates(opts \\ []) when is_list(opts) do
-    opts = NimbleOptions.validate!(opts, @options_schema)
+    opts = options(opts)
 
-    with rates <- fetch_current_rates(opts) do
+    with {:ok, rates} <- Fetcher.current_rates() do
       rates =
         rates
         |> map_rates(opts)
-        |> rebase(opts)
+        |> Currency.rebase(opts)
 
       {:ok, rates}
     else
@@ -138,21 +145,15 @@ defmodule Forex do
   """
   @spec current_rates!(keyword) :: rate()
   def current_rates!(opts \\ []) when is_list(opts) do
-    opts = NimbleOptions.validate!(opts, @options_schema)
+    opts = options(opts)
 
-    with rates <- fetch_current_rates(opts) do
+    with {:ok, rates} <- Fetcher.current_rates() do
       rates
       |> map_rates(opts)
-      |> rebase(opts)
+      |> Currency.rebase(opts)
     else
       {:error, reason} -> raise reason
     end
-  end
-
-  defp fetch_current_rates(opts) do
-    if Keyword.get(opts, :cache),
-      do: Cache.resolve(:current, &Feed.current_rates/0),
-      else: Feed.current_rates()
   end
 
   ## Private Functions
@@ -165,54 +166,8 @@ defmodule Forex do
     format = Keyword.get(opts, :format)
 
     Enum.map(rates, fn %{currency: currency, rate: value} ->
-      {currency, format_value(value, format)}
+      {currency, Formatter.format_value(value, format)}
     end)
     |> Enum.into(%{})
   end
-
-  defp rebase(rates, opts) do
-    format = Keyword.get(opts, :format)
-    base_currency = Keyword.get(opts, :base)
-
-    new_base_rate =
-      case Map.get(rates, base_currency) do
-        nil -> nil
-        rate -> Decimal.new(rate)
-      end
-
-    cond do
-      base_currency == "EUR" ->
-        Map.put(rates, "EUR", format_value(1, format))
-
-      new_base_rate == nil ->
-        {:error, "Base currency not found in the available currency rates"}
-
-      true ->
-        rates
-        |> Enum.map(fn {currency, rate_value} ->
-          {currency, convert(rate_value, new_base_rate, format)}
-        end)
-        |> Map.new()
-        |> Map.put("EUR", Decimal.div(1, new_base_rate) |> format_value(format))
-        |> Map.put(base_currency, format_value(1, format))
-    end
-  end
-
-  defp convert(%Decimal{} = currency_value, new_base_value, :decimal) do
-    Decimal.Context.set(%Decimal.Context{Decimal.Context.get() | precision: 6})
-    Decimal.div(currency_value, new_base_value)
-  end
-
-  defp convert(currency_value, new_base_value, :string) when is_binary(currency_value) do
-    Decimal.Context.set(%Decimal.Context{Decimal.Context.get() | precision: 6})
-    Decimal.div(Decimal.new(currency_value), new_base_value) |> Decimal.to_string()
-  end
-
-  # Format the rate value based on the `format` option
-  defp format_value(value, :string) when is_binary(value), do: value
-  defp format_value(value, :decimal) when is_binary(value), do: Decimal.new(value)
-  defp format_value(value, :string) when is_number(value), do: to_string(value)
-  defp format_value(value, :decimal) when is_number(value), do: Decimal.new(value)
-  defp format_value(%Decimal{} = value, :string), do: Decimal.to_string(value)
-  defp format_value(%Decimal{} = value, :decimal), do: value
 end

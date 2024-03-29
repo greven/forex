@@ -7,6 +7,8 @@ defmodule Forex.Currency do
   exchange rates feed.
   """
 
+  alias Forex.Formatter
+
   @currencies %{
     "AUD" => %{
       name: "Australian Dollar",
@@ -340,4 +342,42 @@ defmodule Forex.Currency do
   end
 
   def get(iso_code), do: Map.get(@currencies, iso_code)
+
+  def rebase(rates, opts) do
+    format = Keyword.get(opts, :format)
+    base_currency = Keyword.get(opts, :base)
+
+    new_base_rate =
+      case Map.get(rates, base_currency) do
+        nil -> nil
+        rate -> Decimal.new(rate)
+      end
+
+    cond do
+      base_currency == "EUR" ->
+        Map.put(rates, "EUR", Formatter.format_value(1, format))
+
+      new_base_rate == nil ->
+        {:error, "Base currency not found in the available currency rates"}
+
+      true ->
+        rates
+        |> Enum.map(fn {currency, rate_value} ->
+          {currency, convert(rate_value, new_base_rate, format)}
+        end)
+        |> Map.new()
+        |> Map.put("EUR", Decimal.div(1, new_base_rate) |> Formatter.format_value(format))
+        |> Map.put(base_currency, Formatter.format_value(1, format))
+    end
+  end
+
+  def convert(%Decimal{} = currency_value, new_base_value, :decimal) do
+    Decimal.Context.set(%Decimal.Context{Decimal.Context.get() | precision: 6})
+    Decimal.div(currency_value, new_base_value)
+  end
+
+  def convert(currency_value, new_base_value, :string) when is_binary(currency_value) do
+    Decimal.Context.set(%Decimal.Context{Decimal.Context.get() | precision: 6})
+    Decimal.div(Decimal.new(currency_value), new_base_value) |> Decimal.to_string()
+  end
 end

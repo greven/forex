@@ -1,150 +1,70 @@
 defmodule Forex.Cache do
   @moduledoc """
-  A simpe caching layer to cache the responses from the `Forex.Feed` module.
-
   Since the ECB reference rates are usually updated at around 16:00 CET
-  every working day we can cache the response.
+  every working day we should cache the response.
 
-  The cache is stored in the ETS table and is automatically invalidated after
-  the time-to-live (TTL) expires.
+  This module defines a simple caching layer behaviour to cache the
+  responses from the `Forex.Feed` module.
   """
-
-  use GenServer
-  import Record
-
-  @table :forex_cache
-  @ttl :timer.hours(12)
-
-  @ets_options [
-    :set,
-    :public,
-    :named_table,
-    read_concurrency: true
-  ]
-
-  # Cache Entry
-  defrecord(:entry, key: nil, value: nil, touched: nil, ttl: nil)
-
-  ## Client Interface
-
-  def start_link(_opts) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
-  end
 
   @doc """
-  List all entries in the ETS cache.
+  Inits the cache.
   """
-  def list, do: list_entries()
+  @callback init() :: any()
 
   @doc """
-  Get the cache entry with the given `key`
+  Get the cache entry with the given `key`.
+  Returns `nil` if the entry does not exist.
   """
-  def get(key), do: get_entry(key)
+  @callback get(key :: any()) :: term() | nil
 
   @doc """
-  Runs a resolver function if the `key` in the `table` is not already cached.
-  ## Examples
-      with {:ok, rates} <- Forex.Cache.resolve(:current, fn ->  Forex.Feed.current_rates() end) do
-        # Do something with rates
-      end
+  Put a new entry into the cache with the given `key` and `value`.
   """
-  def resolve(key, resolver, opts \\ []) when is_function(resolver, 0) do
-    resolve_entry(key, resolver, opts)
-  end
+  @callback put(key :: any(), value :: term(), DateTime.t()) :: term()
 
   @doc """
-  Insert a new entry into the cache with the given `key` and `value`.
+  Get the latest updated at timestamp for the given `key`.
+  Returns `nil` if the entry does not exist.
   """
-  def insert(key, value, opts \\ []), do: insert_entry(key, value, opts)
-
-  @doc """
-  Updates a cache entry from with the given `key` and `value`.
-  """
-  def update(key, changes), do: update_entry(key, changes)
+  @callback last_updated(key :: any()) :: DateTime.t() | nil
 
   @doc """
   Delete an entry from the cache with the given `key`.
   """
-  def delete(key), do: delete_entry(key)
+  @callback delete(key :: any()) :: term()
 
   @doc """
-  Clears all values in the cache table.
+  Reset the cache table.
   """
-  def clear, do: clear_ets_table()
+  @callback reset() :: any()
 
-  ## Server Callbacks
+  @doc """
+  Resolve the cache entry with the `key` `:current_rates`.
+  """
+  @callback current_rates() :: {:ok, list(map())} | {:error, {Exception.t(), String.t()}}
 
-  def init(state) do
-    :ets.new(@table, @ets_options)
-    {:ok, state}
-  rescue
-    ArgumentError -> {:stop, :already_started}
+  @doc """
+  Resolve the cache entry with the `key` `:last_ninety_days_rates`.
+  """
+  @callback last_ninety_days_rates() :: {:ok, list(map())} | {:error, {Exception.t(), String.t()}}
+
+  @doc """
+  Resolve the cache entry with the `key` `:historic_rates`.
+  """
+  @callback historic_rates() :: {:ok, list(map())} | {:error, {Exception.t(), String.t()}}
+
+  def cache_module, do: Forex.Fetcher.options().cache_module
+
+  def current_rates do
+    cache_module().current_rates()
   end
 
-  defp list_entries do
-    list_values = fn list ->
-      list
-      |> Keyword.values()
-      |> Enum.map(&{elem(&1, 1), elem(&1, 2)})
-      |> Enum.into(%{})
-    end
-
-    case :ets.tab2list(@table) do
-      [_ | _] = list -> list_values.(list)
-      _ -> nil
-    end
+  def last_ninety_days_rates do
+    cache_module().last_ninety_days_rates()
   end
 
-  defp get_entry(key) do
-    case :ets.lookup(@table, key) do
-      [] ->
-        :not_found
-
-      [{^key, {:entry, ^key, value, touched, ttl}}] ->
-        case expired?(touched, ttl) do
-          false ->
-            value
-
-          true ->
-            :ets.delete(@table, key)
-            :not_found
-        end
-    end
+  def historic_rates do
+    cache_module().historic_rates()
   end
-
-  defp resolve_entry(key, resolver, opts) do
-    case get_entry(key) do
-      :not_found ->
-        with {:ok, result} <- resolver.() do
-          insert_entry(key, result, opts)
-          result
-        end
-
-      result ->
-        result
-    end
-  end
-
-  defp insert_entry(key, value, opts) do
-    ttl = Keyword.get(opts, :ttl, @ttl)
-    :ets.insert(@table, {key, entry(key: key, value: value, touched: now(), ttl: ttl)})
-  end
-
-  defp update_entry(key, changes) do
-    {:ok, :ets.update_element(@table, key, changes)}
-  end
-
-  defp delete_entry(key) do
-    :ets.delete(@table, key)
-  end
-
-  defp clear_ets_table do
-    :ets.delete(@table)
-    :ets.new(@table, @ets_options)
-  end
-
-  defp expired?(touched, ttl), do: now() - touched >= ttl
-
-  # Return current timestamp in milliseconds
-  defp now, do: System.system_time(:millisecond)
 end
