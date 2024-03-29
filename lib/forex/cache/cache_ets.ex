@@ -22,10 +22,22 @@ defmodule Forex.Cache.ETS do
   end
 
   @impl true
-  def get(key) do
+  def get(key, opts \\ []) do
+    ttl = Keyword.get(opts, :ttl, :infinity)
+
     case :ets.lookup(@table, key) do
-      [{^key, value, _}] -> value
-      [] -> nil
+      [{^key, value, updated_at}] ->
+        case expired?(updated_at, ttl) do
+          false ->
+            value
+
+          true ->
+            delete(key)
+            nil
+        end
+
+      [] ->
+        nil
     end
   end
 
@@ -44,6 +56,20 @@ defmodule Forex.Cache.ETS do
   end
 
   @impl true
+  def resolve(key, resolver, opts \\ []) when is_function(resolver, 0) do
+    case get(key, opts) do
+      nil ->
+        with {:ok, value} <- resolver.() do
+          put(key, value, DateTime.utc_now())
+          value
+        end
+
+      value ->
+        value
+    end
+  end
+
+  @impl true
   def delete(key) do
     :ets.delete(@table, key)
   end
@@ -55,26 +81,11 @@ defmodule Forex.Cache.ETS do
   end
 
   @impl true
-  def current_rates do
-    case get(:current_rates) do
-      nil -> {:error, Forex.FeedError, "No exchange rates were found"}
-      rates -> {:ok, rates}
-    end
+  def terminate do
+    :ets.delete(@table)
   end
 
-  @impl true
-  def last_ninety_days_rates do
-    case get(:last_ninety_days_rates) do
-      nil -> {:error, Forex.FeedError, "No exchange rates were found"}
-      rates -> {:ok, rates}
-    end
-  end
-
-  @impl true
-  def historic_rates do
-    case get(:historic_rates) do
-      nil -> {:error, Forex.FeedError, "No exchange rates were found"}
-      rates -> {:ok, rates}
-    end
+  defp expired?(touched, ttl) do
+    DateTime.diff(DateTime.utc_now(), touched, :millisecond) > ttl
   end
 end

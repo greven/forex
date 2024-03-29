@@ -25,7 +25,6 @@ defmodule Forex.Fetcher do
   alias Forex.Cache
   alias Forex.Feed
 
-
   ## Options
 
   @default_cache_module Forex.Cache.ETS
@@ -82,20 +81,20 @@ defmodule Forex.Fetcher do
     {:ok, opts}
   end
 
-  # @doc false
-  # def terminate(:normal, opts) do
-  #   opts.cache_module.terminate()
-  # end
+  @doc false
+  def terminate(:normal, opts) do
+    opts.cache_module.terminate()
+  end
 
-  # @doc false
-  # def terminate(:shutdown, opts) do
-  #   opts.cache_module.terminate()
-  # end
+  @doc false
+  def terminate(:shutdown, opts) do
+    opts.cache_module.terminate()
+  end
 
-  # @doc false
-  # def terminate(reason, _config) do
-  #   Logger.error("[Forex.Fetcher] Terminate with #{inspect(reason)}")
-  # end
+  @doc false
+  def terminate(reason, _config) do
+    Logger.error("[Forex.Fetcher] Terminate with #{inspect(reason)}")
+  end
 
   @doc false
   def handle_call(:current_rates, _from, opts) do
@@ -111,17 +110,9 @@ defmodule Forex.Fetcher do
 
   defp fetch_current_rates(opts) do
     if opts.use_cache do
-      case Cache.current_rates() do
-        {:ok, rates} ->
-          {:ok, rates}
-
-        {:error, _error, _reason} ->
-          Logger.info("[Forex.Fetcher] Fetching current rates")
-          {:ok, rates} = Feed.current_rates()
-          Cache.cache_module().put(:current_rates, rates, DateTime.utc_now())
-          {:ok, rates}
-      end
+      Cache.resolve(:current_rates, &Feed.current_rates/0, ttl: opts.schedular_interval)
     else
+      Feed.current_rates()
     end
   end
 

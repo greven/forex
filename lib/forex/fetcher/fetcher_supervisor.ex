@@ -11,7 +11,7 @@ defmodule Forex.Fetcher.Supervisor do
   @doc false
   def start_link(opts) do
     Supervisor.start_link(__MODULE__, opts, name: __MODULE__)
-    Fetcher.start()
+    if Fetcher.options()[:auto_start], do: Fetcher.start()
   end
 
   @doc false
@@ -35,11 +35,11 @@ defmodule Forex.Fetcher.Supervisor do
     }
   end
 
-  # def stop_fetcher do
-  #   Supervisor.terminate_child(__MODULE__, Fetcher)
-  # end
+  def stop_fetcher do
+    Supervisor.terminate_child(__MODULE__, Fetcher)
+  end
 
-  # def restart_fetcher do
-  #   Supervisor.restart_child(__MODULE__, Fetcher)
-  # end
+  def restart_fetcher do
+    Supervisor.restart_child(__MODULE__, Fetcher)
+  end
 end
