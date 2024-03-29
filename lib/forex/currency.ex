@@ -7,7 +7,7 @@ defmodule Forex.Currency do
   exchange rates feed.
   """
 
-  alias Forex.Formatter
+  alias Forex.Helper
 
   @currencies %{
     "AUD" => %{
@@ -355,10 +355,10 @@ defmodule Forex.Currency do
 
     cond do
       base_currency == "EUR" ->
-        Map.put(rates, "EUR", Formatter.format_value(1, format))
+        Map.put(rates, "EUR", Helper.format_value(1, format))
 
       new_base_rate == nil ->
-        {:error, "Base currency not found in the available currency rates"}
+        {Forex.CurrencyError, "Base currency not found in the available currency rates"}
 
       true ->
         rates
@@ -366,8 +366,8 @@ defmodule Forex.Currency do
           {currency, convert(rate_value, new_base_rate, format)}
         end)
         |> Map.new()
-        |> Map.put("EUR", Decimal.div(1, new_base_rate) |> Formatter.format_value(format))
-        |> Map.put(base_currency, Formatter.format_value(1, format))
+        |> Map.put("EUR", Decimal.div(1, new_base_rate) |> Helper.format_value(format))
+        |> Map.put(base_currency, Helper.format_value(1, format))
     end
   end
 

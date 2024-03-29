@@ -71,12 +71,21 @@ defmodule Forex.Fetcher do
     GenServer.call(__MODULE__, :current_rates)
   end
 
+  def last_ninety_days_rates do
+    GenServer.call(__MODULE__, :last_ninety_days_rates)
+  end
+
+  def historic_rates do
+    GenServer.call(__MODULE__, :historic_rates)
+  end
+
   # Server Callbacks
 
   @doc false
   def init(opts) do
     if opts.use_cache, do: opts.cache_module.init()
     schedule_work(:current_rates, 0)
+    # schedule_work(:last_ninety_days_rates, 0)
 
     {:ok, opts}
   end
@@ -98,26 +107,47 @@ defmodule Forex.Fetcher do
 
   @doc false
   def handle_call(:current_rates, _from, opts) do
-    {:reply, fetch_current_rates(opts), opts}
+    {:reply, fetch_rates(:current_rates, &Feed.current_rates/0, opts), opts}
+  end
+
+  @doc false
+  def handle_call(:last_ninety_days_rates, _from, opts) do
+    {:reply, fetch_rates(:last_ninety_days_rates, &Feed.last_ninety_days_rates/0, opts), opts}
+  end
+
+  @doc false
+  def handle_call(:historic_rates, _from, opts) do
+    {:reply, fetch_rates(:historic_rates, &Feed.historic_rates/0, opts), opts}
   end
 
   @doc false
   def handle_info(:current_rates, opts) do
-    fetch_current_rates(opts)
+    fetch_rates(:current_rates, &Feed.current_rates/0, opts)
     schedule_work(:current_rates, opts.schedular_interval)
     {:noreply, opts}
   end
 
-  defp fetch_current_rates(opts) do
+  @doc false
+  def handle_info(:last_ninety_days_rates, opts) do
+    fetch_rates(:last_ninety_days_rates, &Feed.last_ninety_days_rates/0, opts)
+    schedule_work(:last_ninety_days_rates, opts.schedular_interval)
+    {:noreply, opts}
+  end
+
+  defp fetch_rates(cache_key, feed_function, opts) when is_function(feed_function, 0) do
     if opts.use_cache do
-      Cache.resolve(:current_rates, &Feed.current_rates/0, ttl: opts.schedular_interval)
+      Cache.resolve(cache_key, feed_function, ttl: opts.schedular_interval)
     else
-      Feed.current_rates()
+      feed_function.()
     end
   end
 
   defp schedule_work(:current_rates, interval_ms) when is_integer(interval_ms) do
     Process.send_after(self(), :current_rates, interval_ms)
+  end
+
+  defp schedule_work(:last_ninety_days_rates, interval_ms) when is_integer(interval_ms) do
+    Process.send_after(self(), :last_ninety_days_rates, interval_ms)
   end
 
   defp schedule_work(_, _), do: :ok

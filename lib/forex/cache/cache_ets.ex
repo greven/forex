@@ -61,11 +61,11 @@ defmodule Forex.Cache.ETS do
       nil ->
         with {:ok, value} <- resolver.() do
           put(key, value, DateTime.utc_now())
-          value
+          {:ok, value}
         end
 
       value ->
-        value
+        {:ok, value}
     end
   end
 

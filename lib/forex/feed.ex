@@ -25,7 +25,7 @@ defmodule Forex.Feed do
         {:ok, rates}
 
       {:error, reason} ->
-        {:error, reason}
+        {Forex.FeedError, reason}
     end
   end
 
@@ -50,7 +50,7 @@ defmodule Forex.Feed do
         {:ok, rates}
 
       {:error, reason} ->
-        {:error, reason}
+        {Forex.FeedError, reason}
     end
   end
 
@@ -75,7 +75,7 @@ defmodule Forex.Feed do
         {:ok, rates}
 
       {:error, reason} ->
-        {:error, reason}
+        {Forex.FeedError, reason}
     end
   end
 

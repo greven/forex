@@ -41,7 +41,7 @@ defmodule Forex do
 
   alias Forex.Fetcher
   alias Forex.Currency
-  alias Forex.Formatter
+  alias Forex.Helper
 
   ## Options
 
@@ -156,6 +156,114 @@ defmodule Forex do
     end
   end
 
+  @doc """
+  Fetch the exchange rates for the last ninety days from
+  the European Central Bank (ECB).
+
+  ## Arguments
+
+  * `opts` - A keyword list of options. The following options are supported:
+    * `:format` - The format of the rate value. The default is `:decimal`. Supported values are `:decimal` and `:string`.
+    * `:base` - The base currency to convert the rates to. The default is currency base is `EUR`.
+  """
+  @spec last_ninety_days_rates(keyword) :: {:ok, [rate()]} | {:error, term}
+  def last_ninety_days_rates(opts \\ []) when is_list(opts) do
+    opts = options(opts)
+
+    with {:ok, entries} <- Fetcher.last_ninety_days_rates() do
+      entries =
+        entries
+        |> Enum.map(fn %{time: datetime, rates: rates} ->
+          rates =
+            rates
+            |> map_rates(opts)
+            |> Currency.rebase(opts)
+
+          %{date: Helper.parse_date(datetime), rates: rates}
+        end)
+
+      {:ok, entries}
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Fetch the historic exchange rates feed from
+  the European Central Bank (ECB).
+
+  By default, the historic rates are not automatically fetched when using
+  the Fetcher (scheduler) module, since the whole file is returned this avoids excessive memory
+  usage when caching the results if not needed. To fetch and cache the historic rates,
+  you need to manually call this function.
+
+  ## Arguments
+
+  * `opts` - A keyword list of options. The following options are supported:
+    * `:format` - The format of the rate value. The default is `:decimal`. Supported values are `:decimal` and `:string`.
+    * `:base` - The base currency to convert the rates to. The default is currency base is `EUR`.
+  """
+  @spec historic_rates(keyword) :: {:ok, [rate()]} | {:error, term}
+  def historic_rates(opts \\ []) when is_list(opts) do
+    opts = options(opts)
+
+    with {:ok, entries} <- Fetcher.historic_rates() do
+      entries =
+        entries
+        |> Enum.map(fn %{time: datetime, rates: rates} ->
+          rates =
+            rates
+            |> map_rates(opts)
+            |> Currency.rebase(opts)
+
+          %{date: Helper.parse_date(datetime), rates: rates}
+        end)
+
+      {:ok, entries}
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Get a specific date from the historic exchange rates feed.
+  It returns either an ´{:ok, rate()}` if the rate was successfully
+  retrieved or an `{:error, reasons}` if the rate was not found.
+
+  ## Arguments
+
+  * `date` - The date to get the rate for. `date` is either a `Date.new()` struct
+    or a string in the ISO 8601 format.
+  * `opts` - A keyword list of options. The following options are supported:
+    * `:format` - The format of the rate value. The default is `:decimal`. Supported values are `:decimal` and `:string`.
+    * `:base` - The base currency to convert the rates to. The default is currency base is `EUR`.
+
+  """
+  def get_historic_rate(date, opts \\ [])
+
+  def get_historic_rate(date, opts) when is_binary(date) do
+    case Date.from_iso8601(date) do
+      {:ok, date} -> get_historic_rate(date, opts)
+      _ -> {:error, "Invalid date format: #{date}"}
+    end
+  end
+
+  def get_historic_rate(%Date{calendar: Calendar.ISO} = date, opts) when is_list(opts) do
+    case historic_rates(opts) do
+      {:ok, entries} ->
+        case Enum.find(entries, fn
+               %{date: %Date{} = d} -> Date.compare(date, d) == :eq
+               _ -> false
+             end) do
+          nil -> {:error, "Rate not found for date: #{Date.to_iso8601(date)}"}
+          entry -> {:ok, entry.rates}
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   ## Private Functions
 
   # Map the rates response to the format %{currency_code() => Decimal.t()}
@@ -166,7 +274,7 @@ defmodule Forex do
     format = Keyword.get(opts, :format)
 
     Enum.map(rates, fn %{currency: currency, rate: value} ->
-      {currency, Formatter.format_value(value, format)}
+      {currency, Helper.format_value(value, format)}
     end)
     |> Enum.into(%{})
   end
