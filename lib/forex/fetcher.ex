@@ -22,10 +22,11 @@ defmodule Forex.Fetcher do
   require Logger
 
   alias __MODULE__
+
   alias Forex.Cache
   alias Forex.Feed
 
-  ## Options
+  ##  Options
 
   @default_cache_module Forex.Cache.ETS
   @default_schedular_interval :timer.hours(12)
@@ -67,25 +68,25 @@ defmodule Forex.Fetcher do
     Fetcher.Supervisor.start_fetcher(opts)
   end
 
-  def current_rates do
-    GenServer.call(__MODULE__, :current_rates)
+  def current_rates(use_cache \\ true) do
+    GenServer.call(__MODULE__, {:current_rates, use_cache})
   end
 
-  def last_ninety_days_rates do
-    GenServer.call(__MODULE__, :last_ninety_days_rates)
+  def last_ninety_days_rates(use_cache \\ true) do
+    GenServer.call(__MODULE__, {:last_ninety_days_rates, use_cache})
   end
 
-  def historic_rates do
-    GenServer.call(__MODULE__, :historic_rates)
+  def historic_rates(use_cache \\ true) do
+    GenServer.call(__MODULE__, {:historic_rates, use_cache})
   end
 
-  # Server Callbacks
+  ## Server Callbacks
 
   @doc false
   def init(opts) do
     if opts.use_cache, do: opts.cache_module.init()
     schedule_work(:current_rates, 0)
-    # schedule_work(:last_ninety_days_rates, 0)
+    schedule_work(:last_ninety_days_rates, 0)
 
     {:ok, opts}
   end
@@ -106,17 +107,23 @@ defmodule Forex.Fetcher do
   end
 
   @doc false
-  def handle_call(:current_rates, _from, opts) do
+  def handle_call({:current_rates, use_cache}, _from, opts) do
+    opts = Map.merge(opts, %{use_cache: use_cache})
+
     {:reply, fetch_rates(:current_rates, &Feed.current_rates/0, opts), opts}
   end
 
   @doc false
-  def handle_call(:last_ninety_days_rates, _from, opts) do
+  def handle_call({:last_ninety_days_rates, use_cache}, _from, opts) do
+    opts = Map.merge(opts, %{use_cache: use_cache})
+
     {:reply, fetch_rates(:last_ninety_days_rates, &Feed.last_ninety_days_rates/0, opts), opts}
   end
 
   @doc false
-  def handle_call(:historic_rates, _from, opts) do
+  def handle_call({:historic_rates, use_cache}, _from, opts) do
+    opts = Map.merge(opts, %{use_cache: use_cache})
+
     {:reply, fetch_rates(:historic_rates, &Feed.historic_rates/0, opts), opts}
   end
 
@@ -135,11 +142,9 @@ defmodule Forex.Fetcher do
   end
 
   defp fetch_rates(cache_key, feed_function, opts) when is_function(feed_function, 0) do
-    if opts.use_cache do
-      Cache.resolve(cache_key, feed_function, ttl: opts.schedular_interval)
-    else
-      feed_function.()
-    end
+    if opts.use_cache,
+      do: Cache.resolve(cache_key, feed_function, ttl: opts.schedular_interval),
+      else: feed_function.()
   end
 
   defp schedule_work(:current_rates, interval_ms) when is_integer(interval_ms) do

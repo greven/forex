@@ -16,20 +16,58 @@ defmodule Forex.Helper do
   def format_value(_, format), do: raise(Forex.FormatError, "Invalid format value: #{format}")
 
   @doc """
+  Round the rate value based on the `round` option
+  """
+  def round_value(value, nil), do: value
+
+  def round_value(value, precision)
+      when is_number(value) and is_integer(precision) and precision >= 0 and precision <= 15 do
+    Float.round(value, precision)
+  end
+
+  def round_value(%Decimal{} = value, precision) when is_integer(precision) do
+    Decimal.round(value, precision)
+  end
+
+  def round_value(value, precision) when is_binary(value) do
+    Decimal.new(value)
+    |> Decimal.round(precision)
+    |> Decimal.to_string()
+  end
+
+  @doc """
   Attempt to parse a date from a binary string in ISO 8601 format
   """
   def parse_date(string) when is_binary(string) do
-    case Date.from_iso8601(string) do
+    Date.from_iso8601(string)
+  end
+
+  def parse_date({year, month, day}) do
+    Date.new(year, month, day)
+  end
+
+  def parse_date(%DateTime{} = datetime) do
+    DateTime.to_date(datetime)
+  end
+
+  def parse_date(%Date{} = date), do: date
+
+  def parse_date(_), do: nil
+
+  @doc """
+  Map the date to a `Date` struct
+  or `nil` if the date cannot be parsed.
+  """
+  def map_date(date) do
+    case parse_date(date) do
       {:ok, date} -> date
-      _ -> ""
+      _ -> nil
     end
   end
 
-  def parse_date(_), do: ""
-
   @doc """
   Cache memory usage in megabytes.
-  Useful for debugging and monitoring the cache memory usage.
+  Useful for debugging and monitoring the... cache memory usage.
   """
   def cache_memory_usage(:ets) do
     words = :ets.info(:forex_cache, :memory)

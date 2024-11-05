@@ -7,8 +7,6 @@ defmodule Forex.Currency do
   exchange rates feed.
   """
 
-  alias Forex.Helper
-
   @currencies %{
     "AUD" => %{
       name: "Australian Dollar",
@@ -332,8 +330,21 @@ defmodule Forex.Currency do
     }
   }
 
+  ## Guards
+
+  @doc false
+  defguard is_currency_code(currency_code) when is_atom(currency_code) or is_binary(currency_code)
+
+  ## Public API
+
+  @doc """
+  Get all list of all the supported currencies.
+  """
   def all, do: @currencies
 
+  @doc """
+  Get the currency information for the given ISO code.
+  """
   def get(iso_code) when is_atom(iso_code) do
     iso_code
     |> Atom.to_string()
@@ -343,41 +354,52 @@ defmodule Forex.Currency do
 
   def get(iso_code), do: Map.get(@currencies, iso_code)
 
-  def rebase(rates, opts) do
-    format = Keyword.get(opts, :format)
-    base_currency = Keyword.get(opts, :base)
+  ## Helpers
 
-    new_base_rate =
-      case Map.get(rates, base_currency) do
-        nil -> nil
-        rate -> Decimal.new(rate)
-      end
+  @doc """
+  The default base currency is EUR, so if the base_currency is a different
+  currency, the rates will be converted to the new currency base.
+  """
+  def maybe_rebase(eur_rates, "EUR"), do: eur_rates
 
-    cond do
-      base_currency == "EUR" ->
-        Map.put(rates, "EUR", Helper.format_value(1, format))
-
-      new_base_rate == nil ->
+  def maybe_rebase(eur_rates, new_base) when is_currency_code(new_base) do
+    case get(new_base) do
+      nil ->
         {Forex.CurrencyError, "Base currency not found in the available currency rates"}
 
-      true ->
-        rates
-        |> Enum.map(fn {currency, rate_value} ->
-          {currency, convert(rate_value, new_base_rate, format)}
-        end)
-        |> Map.new()
-        |> Map.put("EUR", Decimal.div(1, new_base_rate) |> Helper.format_value(format))
-        |> Map.put(base_currency, Helper.format_value(1, format))
+      _ ->
+        {:ok, rebase(eur_rates, new_base)}
     end
   end
 
-  def convert(%Decimal{} = currency_value, new_base_value, :decimal) do
-    Decimal.Context.set(%Decimal.Context{Decimal.Context.get() | precision: 6})
-    Decimal.div(currency_value, new_base_value)
+  @doc """
+  Given a list of rates in the form of %{currency_code() => Decimal.t()},
+  convert the rates to a new currency base.
+  """
+  def rebase(rates, base) do
+    # Find the rate for the new base currency
+    base_rate = Enum.find(rates, &(&1.currency == base))
+
+    case base_rate do
+      nil ->
+        rates
+
+      %{rate: base_rate_value} ->
+        rates
+        |> Enum.map(fn
+          # Set base currency rate to 1
+          %{currency: ^base} = rate ->
+            %{rate | rate: Decimal.new(1)}
+
+          # Convert other rates relative to new base
+          %{rate: rate_value} = rate ->
+            %{rate | rate: convert_rate(rate_value, base_rate_value)}
+        end)
+    end
   end
 
-  def convert(currency_value, new_base_value, :string) when is_binary(currency_value) do
-    Decimal.Context.set(%Decimal.Context{Decimal.Context.get() | precision: 6})
-    Decimal.div(Decimal.new(currency_value), new_base_value) |> Decimal.to_string()
+  # Converts a currency value from one currency to another.
+  defp convert_rate(%Decimal{} = currency_value, new_base_value) do
+    Decimal.div(currency_value, new_base_value)
   end
 end

@@ -12,9 +12,7 @@ defmodule Forex.Feed do
   def path(:last_ninety_days_rates), do: "/eurofxref-hist-90d.xml"
   def path(:historic_rates), do: "/eurofxref-hist.xml"
 
-  # --------------------------------
-  # Feed API
-  # --------------------------------
+  ## Feed API
 
   @spec current_rates(options :: keyword()) :: {:ok, list(map())} | {:error, term()}
   def current_rates(options \\ []) do
@@ -42,6 +40,8 @@ defmodule Forex.Feed do
 
   @spec historic_rates(options :: keyword()) :: {:ok, list(map())} | {:error, term()}
   def historic_rates(options \\ []) do
+    options = Keyword.merge([compress_body: true], options)
+
     fetch(:historic_rates, options)
     |> case do
       {:ok, %{body: body}} ->
@@ -76,9 +76,7 @@ defmodule Forex.Feed do
     )
   end
 
-  # --------------------------------
-  # Fetch API
-  # --------------------------------
+  ## Fetch API
 
   def fetch(feed, options \\ []) do
     options = Keyword.merge([url: path(feed)], options)

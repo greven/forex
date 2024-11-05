@@ -1,10 +1,12 @@
 defmodule Forex.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :forex,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
@@ -31,8 +33,9 @@ defmodule Forex.MixProject do
       {:decimal, "~> 2.1"},
       {:sweet_xml, "~> 0.7"},
       {:nimble_options, "~> 1.1"},
+      {:phoenix, "~> 1.7", optional: true},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.31", only: [:dev, :docs]}
+      {:ex_doc, "~> 0.34", only: [:dev, :docs]}
     ]
   end
 

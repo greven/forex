@@ -5,9 +5,16 @@ defmodule Forex.Application do
 
   @impl true
   def start(_type, args) do
+    start_api? = Application.get_env(:forex, :start_api, false)
+
     children = [
       Forex.Fetcher.Supervisor
     ]
+
+    children =
+      if start_api?,
+        do: [ForexAPI.Endpoint | children],
+        else: children
 
     opts =
       if args == [],
