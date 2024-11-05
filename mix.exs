@@ -34,8 +34,8 @@ defmodule Forex.MixProject do
       {:sweet_xml, "~> 0.7"},
       {:nimble_options, "~> 1.1"},
       {:phoenix, "~> 1.7", optional: true},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.34", only: [:dev, :docs]}
+      {:ex_doc, "~> 0.34", only: [:dev, :docs]},
+      {:git_ops, "~> 2.6", only: [:dev]}
     ]
   end
 
