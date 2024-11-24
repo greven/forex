@@ -1,6 +1,6 @@
 # ExForex
 
-**TODO: Add description**
+European Central Bank (ECB) exchange rates for Elixir.
 
 ## Installation
 
