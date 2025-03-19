@@ -48,7 +48,7 @@ that fetches the data from the European Central Bank and caches it for later use
 ## Usage
 
 By default the `base` currency is the Euro (EUR), the same as the European Central Bank,
-but you change the base currency by passing the `base` option to the relevant functions.
+but you can change the base currency by passing the `base` option to the relevant functions.
 
 To fetch the latest exchange rates, you can use the `current_rates/1` function:
 
