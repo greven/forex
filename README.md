@@ -1,5 +1,7 @@
 # Forex
 
+<!-- MDOC !-->
+
 `Forex` is a simple Elixir library that serves as a wrapper to the
 foreign exchange reference rates provided by the European Central Bank.
 
@@ -167,6 +169,7 @@ iex> Forex.available_currencies()
 [:try, :eur, :aud, :bgn, :brl, ...]
 ```
 
+<!-- MDOC !-->
 
 Full documentation can be found at https://hexdocs.pm/forex.
 
