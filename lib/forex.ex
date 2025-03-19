@@ -709,7 +709,7 @@ defmodule Forex do
   ## Private Functions
 
   # Default base currency rate
-  def base_currency_rate, do: %{currency: "EUR", rate: "1.00000"}
+  defp base_currency_rate, do: %{currency: "EUR", rate: "1.00000"}
 
   # Map the rates response to the format %{currency_code() => Decimal.t()}
   # If not EUR based currency we rebase the rates to the new base currency

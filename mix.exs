@@ -20,14 +20,6 @@ defmodule Forex.MixProject do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
-  def application do
-    [
-      mod: {Forex.Application, [strategy: :one_for_one, name: Forex.Supervisor]},
-      extra_applications: [:logger]
-    ]
-  end
-
   # Specifies which paths to compile per environment.
   defp elixirc_paths(:test), do: ["lib", "test", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
@@ -38,16 +30,16 @@ defmodule Forex.MixProject do
       files: [
         "lib",
         "mix.exs",
-        "CHANGELOG*",
         "README*",
+        "CHANGELOG*",
         "LICENSE*"
       ],
       maintainers: ["Nuno Freire"],
       licenses: ["MIT"],
       links: %{
         "GitHub" => @source_url,
-        "Readme" => @source_url <> "/blob/#{@version}/README.md",
-        "Changelog" => @source_url <> "/blob/#{@version}/CHANGELOG.md"
+        "Readme" => @source_url <> "/blob/v#{@version}/README.md",
+        "Changelog" => @source_url <> "/blob/v#{@version}/CHANGELOG.md"
       }
     ]
   end
@@ -60,8 +52,8 @@ defmodule Forex.MixProject do
 
   defp docs do
     [
-      main: "Forex",
       name: "Forex",
+      main: "readme",
       source_ref: @version,
       source_url: @source_url,
       canonical: "http://hexdocs.pm/forex",
@@ -93,11 +85,10 @@ defmodule Forex.MixProject do
     [
       ~r(Forex.Support.*),
       ~r(Mix.*),
-      Forex.Application,
-      Forex.FeedError,
-      Forex.DateError,
+      Forex.Supervisor,
       Forex.CurrencyError,
-      Forex.Fetcher.Supervisor
+      Forex.FeedError,
+      Forex.DateError
     ]
   end
 

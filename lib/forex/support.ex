@@ -270,12 +270,6 @@ defmodule Forex.Support do
   @doc """
   Cache memory usage in megabytes.
   Useful for debugging and monitoring the... cache memory usage.
-
-  ## Examples
-
-      iex> r = Forex.Support.cache_memory_usage(:ets)
-      iex> r |> String.contains?("MB")
-      true
   """
   def cache_memory_usage(:ets) do
     words = :ets.info(:forex_cache, :memory)

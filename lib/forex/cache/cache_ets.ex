@@ -3,8 +3,6 @@ defmodule Forex.Cache.ETS do
   Implementation of the `Forex.Cache` behaviour using ETS.
   """
 
-  require Logger
-
   @behaviour Forex.Cache
 
   @table :forex_cache

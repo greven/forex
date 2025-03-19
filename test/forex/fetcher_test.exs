@@ -1,5 +1,5 @@
 defmodule Forex.FetcherTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Forex.Support.FeedFixtures
 
@@ -7,8 +7,7 @@ defmodule Forex.FetcherTest do
 
   describe "configuration and options" do
     setup do
-      {:ok, _} = Application.ensure_all_started(:forex)
-      Forex.Cache.cache_mod().init()
+      start_link_supervised!(Forex.Supervisor)
 
       :ok
     end
@@ -22,14 +21,14 @@ defmodule Forex.FetcherTest do
     end
 
     test "the fetcher supervisor starts the fetcher process" do
-      fetcher_supervisor_pid = Process.whereis(Forex.Fetcher.Supervisor)
+      fetcher_supervisor_pid = Process.whereis(Forex.Supervisor)
       fetcher_pid = Process.whereis(Forex.Fetcher)
 
       assert Process.alive?(fetcher_supervisor_pid)
       assert Process.alive?(fetcher_pid)
-      assert Forex.Fetcher.Supervisor.fetcher_initiated?()
-      assert Forex.Fetcher.Supervisor.fetcher_status() == :running
-      assert Forex.Fetcher.Supervisor.start_fetcher() == {:error, {:already_started, fetcher_pid}}
+      assert Forex.Supervisor.fetcher_initiated?()
+      assert Forex.Supervisor.fetcher_status() == :running
+      assert Forex.Supervisor.start_fetcher() == {:error, {:already_started, fetcher_pid}}
     end
 
     test "the fetcher supervisor starts the fetcher process with the correct options" do
@@ -47,8 +46,7 @@ defmodule Forex.FetcherTest do
 
   describe "get/1" do
     setup do
-      {:ok, _} = Application.ensure_all_started(:forex)
-      Forex.Cache.cache_mod().init()
+      start_link_supervised!(Forex.Supervisor)
 
       :ok
     end
@@ -83,24 +81,18 @@ defmodule Forex.FetcherTest do
 
   describe "get/2" do
     setup do
-      {:ok, _} = Application.ensure_all_started(:forex)
-      Forex.Cache.cache_mod().init()
+      start_link_supervised!(Forex.Supervisor)
 
       :ok
     end
 
     test "returns the current exchange rates without using the cache" do
-      Forex.Cache.cache_mod().reset()
-
-      assert Fetcher.get(:current_rates, use_cache: false) ==
-               {:ok, single_rate_fixture()}
+      assert Fetcher.get(:current_rates, use_cache: false) == {:ok, single_rate_fixture()}
 
       refute Forex.Cache.cache_mod().get(:current_rates)
     end
 
     test "returns the last ninety days exchange rates without using the cache" do
-      Forex.Cache.cache_mod().reset()
-
       assert Fetcher.get(:last_ninety_days_rates, use_cache: false) ==
                {:ok, multiple_rates_fixture()}
 
@@ -108,8 +100,6 @@ defmodule Forex.FetcherTest do
     end
 
     test "returns the historic exchange rates without using the cache" do
-      Forex.Cache.cache_mod().reset()
-
       assert Fetcher.get(:historic_rates, use_cache: false) ==
                {:ok, multiple_rates_fixture()}
 

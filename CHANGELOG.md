@@ -7,5 +7,9 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 ## [v0.1.1](https://github.com/greven/forex.git/compare/v0.1.1...v0.1.1) (2025-03-19)
 
+### Features:
+
+* Initial release
+
 
 

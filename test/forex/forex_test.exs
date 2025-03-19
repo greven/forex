@@ -2,16 +2,9 @@ defmodule ForexTest do
   use ExUnit.Case, async: true
 
   setup_all do
-    Application.ensure_all_started(:forex)
-    Forex.Cache.init()
+    start_link_supervised!(Forex.Supervisor)
 
     :ok
-  end
-
-  describe "application" do
-    test "the application starts" do
-      assert Application.started_applications() |> Enum.any?(fn {app, _, _} -> app == :forex end)
-    end
   end
 
   describe "configuration and options" do
