@@ -1,6 +1,7 @@
 defmodule Forex.FetcherTest do
   use ExUnit.Case, async: true
 
+  import Forex.Support.TestHelpers
   import Forex.Support.FeedFixtures
 
   alias Forex.Fetcher
@@ -46,7 +47,8 @@ defmodule Forex.FetcherTest do
 
   describe "get/1" do
     setup do
-      start_link_supervised!(Forex.Supervisor)
+      setup_test_cache()
+      Forex.Cache.cache_mod().init()
 
       :ok
     end
@@ -61,34 +63,28 @@ defmodule Forex.FetcherTest do
     test "returns the last ninety days exchange rates" do
       Forex.Cache.cache_mod().delete(:last_ninety_days_rates)
 
-      assert Fetcher.get(:last_ninety_days_rates) ==
-               {:ok, multiple_rates_fixture()}
-
-      assert Forex.Cache.cache_mod().get(:last_ninety_days_rates) ==
-               multiple_rates_fixture()
+      assert Fetcher.get(:last_ninety_days_rates) == {:ok, multiple_rates_fixture()}
+      assert Forex.Cache.cache_mod().get(:last_ninety_days_rates) == multiple_rates_fixture()
     end
 
     test "returns the historic exchange rates" do
       Forex.Cache.cache_mod().delete(:historic_rates)
 
-      assert Fetcher.get(:historic_rates) ==
-               {:ok, multiple_rates_fixture()}
-
-      assert Forex.Cache.cache_mod().get(:historic_rates) ==
-               multiple_rates_fixture()
+      assert Fetcher.get(:historic_rates) == {:ok, multiple_rates_fixture()}
+      assert Forex.Cache.cache_mod().get(:historic_rates) == multiple_rates_fixture()
     end
   end
 
   describe "get/2" do
     setup do
-      start_link_supervised!(Forex.Supervisor)
+      setup_test_cache()
+      Forex.Cache.cache_mod().init()
 
       :ok
     end
 
     test "returns the current exchange rates without using the cache" do
       assert Fetcher.get(:current_rates, use_cache: false) == {:ok, single_rate_fixture()}
-
       refute Forex.Cache.cache_mod().get(:current_rates)
     end
 
@@ -100,9 +96,7 @@ defmodule Forex.FetcherTest do
     end
 
     test "returns the historic exchange rates without using the cache" do
-      assert Fetcher.get(:historic_rates, use_cache: false) ==
-               {:ok, multiple_rates_fixture()}
-
+      assert Fetcher.get(:historic_rates, use_cache: false) == {:ok, multiple_rates_fixture()}
       refute Forex.Cache.cache_mod().get(:historic_rates)
     end
   end

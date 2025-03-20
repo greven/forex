@@ -1,6 +1,8 @@
 defmodule Forex.CacheTest do
   use ExUnit.Case
 
+  import Forex.Support.TestHelpers
+
   # Define cache implementation tests for shared behaviour
   defmodule CacheTests do
     @callback cache_mod() :: module()
@@ -124,6 +126,14 @@ defmodule Forex.CacheTest do
     @impl true
     def cache_mod, do: Forex.Cache.ETS
 
+    setup do
+      Application.put_env(:forex, :cache_module, Forex.Cache.ETS)
+    end
+
+    test "cache interface" do
+      assert Forex.Cache.cache_mod() == Forex.Cache.ETS
+    end
+
     test "terminates cache process", %{cache: cache} do
       assert true == cache.terminate()
     end
@@ -136,6 +146,14 @@ defmodule Forex.CacheTest do
 
     @impl true
     def cache_mod, do: Forex.Cache.DETS
+
+    test "cache interface" do
+      assert Forex.Cache.cache_mod() == Forex.Cache.DETS
+    end
+
+    setup do
+      Application.put_env(:forex, :cache_module, Forex.Cache.DETS)
+    end
 
     test "persists data between process restarts" do
       cache = cache_mod()
@@ -159,10 +177,12 @@ defmodule Forex.CacheTest do
   # Test Cache Module Interface
   describe "Forex.Cache interface" do
     test "delegates to configured cache implementation" do
+      setup_test_cache()
+
       cache = Forex.Cache.cache_mod()
       now = DateTime.utc_now()
 
-      assert cache in [Forex.Cache.ETS, Forex.Cache.DETS]
+      assert cache in [Forex.Cache.ETS, Forex.Cache.DETS, Forex.Support.CacheMock]
 
       Forex.Cache.reset()
       Forex.Cache.init()

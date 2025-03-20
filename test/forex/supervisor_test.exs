@@ -1,5 +1,5 @@
 defmodule Forex.FetcherSupervisorTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   describe "options/1" do
     test "returns the default options" do
