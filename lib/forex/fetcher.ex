@@ -86,7 +86,7 @@ defmodule Forex.Fetcher do
 
   The `key` can be one of the following atoms:
 
-  * `:current_rates` - Fetch the current exchange rates.
+  * `:latest_rates` - Fetch the latest exchange rates.
   * `:last_ninety_days_rates` - Fetch the exchange rates for the last 90 days.
   * `:historic_rates` - Fetch the exchange rates for a specific date.
 
@@ -95,9 +95,9 @@ defmodule Forex.Fetcher do
   """
   def get(key, opts \\ [])
 
-  def get(:current_rates, opts) do
-    feed_fn = Keyword.get(opts, :feed_fn) || {Feed, :current_rates, []}
-    fetch_rates(:current_rates, feed_fn, opts)
+  def get(:latest_rates, opts) do
+    feed_fn = Keyword.get(opts, :feed_fn) || {Feed, :latest_rates, []}
+    fetch_rates(:latest_rates, feed_fn, opts)
   end
 
   def get(:last_ninety_days_rates, opts) do
@@ -115,7 +115,7 @@ defmodule Forex.Fetcher do
   @doc false
   def init(opts) do
     if opts.use_cache, do: opts.cache_module.init()
-    schedule_work(:current_rates, 0)
+    schedule_work(:latest_rates, 0)
     schedule_work(:last_ninety_days_rates, 0)
 
     {:ok, opts}
@@ -137,11 +137,11 @@ defmodule Forex.Fetcher do
   end
 
   @doc false
-  def handle_info(:current_rates, opts) do
+  def handle_info(:latest_rates, opts) do
     fetch_opts = Keyword.new(opts)
 
-    fetch_rates(:current_rates, {Feed, :current_rates, []}, fetch_opts)
-    schedule_work(:current_rates, opts.schedular_interval)
+    fetch_rates(:latest_rates, {Feed, :latest_rates, []}, fetch_opts)
+    schedule_work(:latest_rates, opts.schedular_interval)
 
     {:noreply, opts}
   end
@@ -181,8 +181,8 @@ defmodule Forex.Fetcher do
 
   defp resolve_feed_fn(feed_fn) when is_function(feed_fn), do: feed_fn
 
-  defp schedule_work(:current_rates, interval_ms) when is_integer(interval_ms) do
-    Process.send_after(self(), :current_rates, interval_ms)
+  defp schedule_work(:latest_rates, interval_ms) when is_integer(interval_ms) do
+    Process.send_after(self(), :latest_rates, interval_ms)
   end
 
   defp schedule_work(:last_ninety_days_rates, interval_ms) when is_integer(interval_ms) do

@@ -53,11 +53,11 @@ defmodule Forex.FetcherTest do
       :ok
     end
 
-    test "returns the current exchange rates" do
-      Forex.Cache.cache_mod().delete(:current_rates)
+    test "returns the latest exchange rates" do
+      Forex.Cache.cache_mod().delete(:latest_rates)
 
-      assert Fetcher.get(:current_rates) == {:ok, single_rate_fixture()}
-      assert Forex.Cache.cache_mod().get(:current_rates) == single_rate_fixture()
+      assert Fetcher.get(:latest_rates) == {:ok, single_rate_fixture()}
+      assert Forex.Cache.cache_mod().get(:latest_rates) == single_rate_fixture()
     end
 
     test "returns the last ninety days exchange rates" do
@@ -83,9 +83,9 @@ defmodule Forex.FetcherTest do
       :ok
     end
 
-    test "returns the current exchange rates without using the cache" do
-      assert Fetcher.get(:current_rates, use_cache: false) == {:ok, single_rate_fixture()}
-      refute Forex.Cache.cache_mod().get(:current_rates)
+    test "returns the latest exchange rates without using the cache" do
+      assert Fetcher.get(:latest_rates, use_cache: false) == {:ok, single_rate_fixture()}
+      refute Forex.Cache.cache_mod().get(:latest_rates)
     end
 
     test "returns the last ninety days exchange rates without using the cache" do

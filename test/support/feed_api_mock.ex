@@ -6,11 +6,11 @@ defmodule Forex.Support.FeedAPIMock do
   import Forex.Support.FeedFixtures
 
   @impl true
-  def get_current_rates(type: :error) do
+  def get_latest_rates(type: :error) do
     {:error, "Feed API Error"}
   end
 
-  def get_current_rates(_) do
+  def get_latest_rates(_) do
     {:ok, daily_feed_fixture()}
   end
 

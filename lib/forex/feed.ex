@@ -5,12 +5,12 @@ defmodule Forex.Feed do
 
   The ECB provides three different feeds:
 
-  - Current exchange rates: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
+  - Latest exchange rates: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml
   - Exchange rates for the last ninety days: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist-90d.xml
   - Historic exchange rates: https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.xml
 
   For each feed, this module provides a function to fetch the rates and parse the response, respectively,
-  `current_rates/1`, `last_ninety_days_rates/1`, and `historic_rates/1`.
+  `latest_rates/1`, `last_ninety_days_rates/1`, and `historic_rates/1`.
   """
 
   alias Forex.Feed.Parser
@@ -24,7 +24,7 @@ defmodule Forex.Feed do
   The path for the different exchange rate feeds, corresponding
   to each different feed provided by the European Central Bank (ECB).
   """
-  def path(:current_rates), do: "/eurofxref-daily.xml"
+  def path(:latest_rates), do: "/eurofxref-daily.xml"
   def path(:last_ninety_days_rates), do: "/eurofxref-hist-90d.xml"
   def path(:historic_rates), do: "/eurofxref-hist.xml"
 
@@ -41,9 +41,9 @@ defmodule Forex.Feed do
   @doc """
   Fetches the latest exchange rates from the European Central Bank (ECB).
   """
-  @spec current_rates(keyword) :: {:ok, map()} | {:error, {module(), term()}}
-  def current_rates(options \\ []) do
-    case api_mod().get_current_rates(options) do
+  @spec latest_rates(keyword) :: {:ok, map()} | {:error, {module(), term()}}
+  def latest_rates(options \\ []) do
+    case api_mod().get_latest_rates(options) do
       {:ok, body} -> {:ok, Parser.parse_rates(body)}
       {:error, reason} -> {:error, {Forex.FeedError, reason}}
     end

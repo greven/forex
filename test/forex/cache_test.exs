@@ -187,7 +187,7 @@ defmodule Forex.CacheTest do
       Forex.Cache.reset()
       Forex.Cache.init()
 
-      assert is_nil(Forex.Cache.current_rates())
+      assert is_nil(Forex.Cache.latest_rates())
       assert is_nil(Forex.Cache.last_ninety_days_rates())
       assert is_nil(Forex.Cache.historic_rates())
 

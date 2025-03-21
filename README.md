@@ -50,10 +50,10 @@ that fetches the data from the European Central Bank and caches it for later use
 By default the `base` currency is the Euro (EUR), the same as the European Central Bank,
 but you can change the base currency by passing the `base` option to the relevant functions.
 
-To fetch the latest exchange rates, you can use the `current_rates/1` function:
+To fetch the latest exchange rates, you can use the `latest_rates/1` function:
 
 ```elixir
-iex> Forex.current_rates()
+iex> Forex.latest_rates()
 {:ok,
   %{
     base: :eur,

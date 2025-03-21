@@ -1,16 +1,16 @@
-defmodule Mix.Tasks.Forex.Export.Current do
+defmodule Mix.Tasks.Forex.Export.Latest do
   @moduledoc """
-  Fetch and export the current exchange rates from the
+  Fetch and export the latest exchange rates from the
   European Central Bank to a file.
 
-    mix forex.export.current
+    mix forex.export.latest
 
   ## Examples
 
-    * `mix forex.export.current`
-    * `mix forex.export.current --base USD`
-    * `mix forex.export.current --symbols USD,GBP`
-    * `mix forex.export.current --output priv/data/forex`
+    * `mix forex.export.latest`
+    * `mix forex.export.latest --base USD`
+    * `mix forex.export.latest --symbols USD,GBP`
+    * `mix forex.export.latest --output priv/data/forex`
 
   ## Arguments
 
@@ -20,9 +20,9 @@ defmodule Mix.Tasks.Forex.Export.Current do
     * `--help`      - Show this help message.
   """
 
-  @shortdoc "Fetch the current exchange rates"
+  @shortdoc "Fetch the latest exchange rates"
 
-  @filename "current_rates"
+  @filename "latest_rates"
 
   use Mix.Task
 
@@ -39,7 +39,7 @@ defmodule Mix.Tasks.Forex.Export.Current do
 
     Mix.Task.run("app.start")
 
-    Forex.current_rates!(feed_opts)
+    Forex.latest_rates!(feed_opts)
     |> Support.export!(args_opts, @filename)
 
     Mix.shell().info("Exchange rates exported to #{Support.output_path(args_opts, @filename)}")

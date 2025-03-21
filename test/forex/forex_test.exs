@@ -104,8 +104,8 @@ defmodule ForexTest do
   end
 
   describe "exchange rates" do
-    test "current_rates/0 returns latest exchange rates" do
-      {:ok, %{rates: rates} = rate} = Forex.current_rates()
+    test "latest_rates/0 returns latest exchange rates" do
+      {:ok, %{rates: rates} = rate} = Forex.latest_rates()
 
       assert is_map(rate)
       assert is_map(rates)
@@ -114,8 +114,8 @@ defmodule ForexTest do
       assert %Decimal{} = Map.get(rates, :usd)
     end
 
-    test "current_rates/0 returns rates without using the cache" do
-      {:ok, %{rates: rates} = rate} = Forex.current_rates(use_cache: false)
+    test "latest_rates/0 returns rates without using the cache" do
+      {:ok, %{rates: rates} = rate} = Forex.latest_rates(use_cache: false)
 
       assert is_map(rate)
       assert is_map(rates)
@@ -124,22 +124,22 @@ defmodule ForexTest do
       assert %Decimal{} = Map.get(rates, :usd)
     end
 
-    test "current_rates/1 supports different base currencies" do
-      {:ok, %{rates: eur_rates}} = Forex.current_rates()
-      {:ok, %{rates: usd_rates}} = Forex.current_rates(base: "USD")
+    test "latest_rates/1 supports different base currencies" do
+      {:ok, %{rates: eur_rates}} = Forex.latest_rates()
+      {:ok, %{rates: usd_rates}} = Forex.latest_rates(base: "USD")
 
       refute eur_rates == usd_rates
       assert Decimal.eq?(usd_rates[:usd], Decimal.new(1))
     end
 
-    test "current_rates/1 supports string format" do
-      {:ok, %{rates: rates}} = Forex.current_rates(format: :string)
+    test "latest_rates/1 supports string format" do
+      {:ok, %{rates: rates}} = Forex.latest_rates(format: :string)
 
       assert is_binary(rates[:usd])
     end
 
-    test "current_rates/1 respects rounding option" do
-      {:ok, %{rates: rates}} = Forex.current_rates(round: 2)
+    test "latest_rates/1 respects rounding option" do
+      {:ok, %{rates: rates}} = Forex.latest_rates(round: 2)
 
       decimal_places =
         rates[:usd]
@@ -151,8 +151,8 @@ defmodule ForexTest do
       assert decimal_places == 2
     end
 
-    test "current_rates/1 supports filtering of currency codes" do
-      {:ok, %{rates: rates}} = Forex.current_rates(symbols: [:usd, :gbp])
+    test "latest_rates/1 supports filtering of currency codes" do
+      {:ok, %{rates: rates}} = Forex.latest_rates(symbols: [:usd, :gbp])
 
       assert is_map(rates)
       assert Map.has_key?(rates, :usd)
@@ -161,8 +161,8 @@ defmodule ForexTest do
       assert Enum.sort(Map.keys(rates)) == [:gbp, :usd]
     end
 
-    test "current_rates!/0 returns latest exchange rates" do
-      %{rates: rates} = rate = Forex.current_rates!()
+    test "latest_rates!/0 returns latest exchange rates" do
+      %{rates: rates} = rate = Forex.latest_rates!()
 
       assert is_map(rate)
       assert is_map(rates)
@@ -436,7 +436,7 @@ defmodule ForexTest do
       # last_updated = Forex.last_updated()
 
       # assert is_list(last_updated)
-      # assert Keyword.has_key?(last_updated, :current_rates)
+      # assert Keyword.has_key?(last_updated, :latest_rates)
       # assert Keyword.has_key?(last_updated, :last_ninety_days_rates)
     end
   end

@@ -46,7 +46,7 @@ defmodule Forex.Cache do
 
   Example:
 
-    Forex.Cache.resolve(:current_rates, {Forex.Feed, :fetch_current_rates, []})
+    Forex.Cache.resolve(:latest_rates, {Forex.Feed, :fetch_latest_rates, []})
   """
   @callback resolve(key :: any(), resolver :: mfa() | function(), opts :: Keyword.t()) :: term()
 
@@ -73,8 +73,8 @@ defmodule Forex.Cache do
   def cache_mod,
     do: Forex.Fetcher.options()[:cache_module]
 
-  def current_rates,
-    do: cache_mod().get(:current_rates)
+  def latest_rates,
+    do: cache_mod().get(:latest_rates)
 
   def last_ninety_days_rates,
     do: cache_mod().get(:last_ninety_days_rates)

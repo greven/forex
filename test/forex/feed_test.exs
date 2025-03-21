@@ -12,8 +12,8 @@ defmodule Forex.FeedTest do
   end
 
   describe "path/1" do
-    test "returns the path for the current rates" do
-      assert Feed.path(:current_rates) == "/eurofxref-daily.xml"
+    test "returns the path for the daily rates" do
+      assert Feed.path(:latest_rates) == "/eurofxref-daily.xml"
     end
 
     test "returns the path for the last ninety days rates" do
@@ -31,10 +31,10 @@ defmodule Forex.FeedTest do
     end
   end
 
-  describe "current_rates/1" do
+  describe "latest_rates/1" do
     test "fetches the latest exchange rates from the European Central Bank (ECB)" do
-      assert Feed.current_rates() == {:ok, single_rate_fixture()}
-      assert Feed.current_rates(type: :error) == {:error, {Forex.FeedError, "Feed API Error"}}
+      assert Feed.latest_rates() == {:ok, single_rate_fixture()}
+      assert Feed.latest_rates(type: :error) == {:error, {Forex.FeedError, "Feed API Error"}}
     end
   end
 

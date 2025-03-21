@@ -3,7 +3,7 @@ defmodule Forex.Feed.API do
   This module is responsible for defining the behaviour of the feed (HTTP) client.
   """
 
-  @callback get_current_rates(options :: keyword()) :: {:ok, binary} | {:error, term()}
+  @callback get_latest_rates(options :: keyword()) :: {:ok, binary} | {:error, term()}
 
   @callback get_last_ninety_days_rates(options :: keyword()) ::
               {:ok, binary} | {:error, term()}

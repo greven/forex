@@ -13,8 +13,8 @@ defmodule Forex.Feed.API.HTTP do
   @behaviour Forex.Feed.API
 
   @impl true
-  def get_current_rates(options \\ []) do
-    get(:current_rates, options)
+  def get_latest_rates(options \\ []) do
+    get(:latest_rates, options)
     |> case do
       {:ok, %{body: body}} -> {:ok, body}
       {:error, reason} -> {:error, reason}

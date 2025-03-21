@@ -12,13 +12,13 @@ defmodule Forex.FeedAPIHTTPTest do
     :ok
   end
 
-  describe "get_current_rates/1" do
-    test "fetches the current exchange rates from the European Central Bank (ECB)" do
-      assert {:ok, body} = API.HTTP.get_current_rates()
+  describe "get_latest_rates/1" do
+    test "fetches the latest exchange rates from the European Central Bank (ECB)" do
+      assert {:ok, body} = API.HTTP.get_latest_rates()
       assert String.starts_with?(body, "<?xml version=")
       assert String.contains?(body, "<Cube currency='USD'")
 
-      assert {:error, _} = API.HTTP.get_current_rates(url: @bad_feed_url)
+      assert {:error, _} = API.HTTP.get_latest_rates(url: @bad_feed_url)
     end
   end
 

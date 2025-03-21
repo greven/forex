@@ -222,11 +222,11 @@ defmodule Forex do
   {:ok, %{base: :eur, date: ~D[2025-03-12], rates: %{usd: Decimal.new("1.1234"), jpy: Decimal.new("120.1234"), ...}}}
   ```
   """
-  @spec current_rates(keyword) :: {:ok, rate()} | {:error, term}
-  def current_rates(opts \\ []) when is_list(opts) do
+  @spec latest_rates(keyword) :: {:ok, rate()} | {:error, term}
+  def latest_rates(opts \\ []) when is_list(opts) do
     opts = options(opts)
 
-    case Fetcher.get(:current_rates, use_cache: opts.use_cache, feed_fn: opts.feed_fn) do
+    case Fetcher.get(:latest_rates, use_cache: opts.use_cache, feed_fn: opts.feed_fn) do
       {:ok, entries} ->
         result =
           Enum.map(entries, fn %{time: datetime, rates: rates} ->
@@ -246,11 +246,11 @@ defmodule Forex do
   end
 
   @doc """
-  Same as `current_rates/1`, but raises an error if the request fails.
+  Same as `latest_rates/1`, but raises an error if the request fails.
   """
-  @spec current_rates!(keyword) :: rate()
-  def current_rates!(opts \\ []) when is_list(opts) do
-    case current_rates(opts) do
+  @spec latest_rates!(keyword) :: rate()
+  def latest_rates!(opts \\ []) when is_list(opts) do
+    case latest_rates(opts) do
       {:ok, rates} -> rates
       {:error, reason} -> raise reason
     end
@@ -264,7 +264,7 @@ defmodule Forex do
 
   ## Arguments
 
-  Same options as `current_rates/1`.
+  Same options as `latest_rates/1`.
   """
   @spec last_ninety_days_rates(keyword) :: {:ok, [rate()]} | {:error, term}
   def last_ninety_days_rates(opts \\ []) when is_list(opts) do
@@ -310,7 +310,7 @@ defmodule Forex do
   usage when caching the results if not needed. To fetch and cache the historic rates,
   you need to manually call this function.
 
-  Same options as `current_rates/1`.
+  Same options as `latest_rates/1`.
   """
   @spec historic_rates(keyword) :: {:ok, [rate()]} | {:error, term}
   def historic_rates(opts \\ []) when is_list(opts) do
@@ -356,7 +356,7 @@ defmodule Forex do
 
   * `date` - The date to get the rate for. `date` is either a `Date.new()` struct
     or a string in the ISO 8601 format.
-  * `opts` - Same options as `current_rates/1`.
+  * `opts` - Same options as `latest_rates/1`.
 
   """
   @spec get_historic_rate(maybe_date(), keyword) ::
@@ -419,7 +419,7 @@ defmodule Forex do
 
   * `start_date` - Start date (Date, ISO 8601 string, or {year, month, day} tuple)
   * `end_date` - End date (Date, ISO 8601 string, or {year, month, day} tuple)
-  * `opts` - Same options as `current_rates/1`
+  * `opts` - Same options as `latest_rates/1`
 
   ## Return Value
 
@@ -512,7 +512,7 @@ defmodule Forex do
 
       iex> Forex.last_updated()
       [
-        current_rates: ~U[2024-11-23 18:19:38.974337Z],
+        latest_rates: ~U[2024-11-23 18:19:38.974337Z],
         historic_rates: ~U[2024-11-23 18:27:07.391035Z],
         last_ninety_days_rates: ~U[2024-11-23 18:19:39.111818Z],
       ]

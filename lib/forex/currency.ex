@@ -636,7 +636,7 @@ defmodule Forex.Currency do
     with from <- Support.stringify_code(from),
          to <- Support.stringify_code(to),
          {:ok, _} <- validate_currencies(from, to),
-         {:ok, %{rates: rates}} <- Forex.current_rates(base: from, keys: :strings),
+         {:ok, %{rates: rates}} <- Forex.latest_rates(base: from, keys: :strings),
          {:ok, result} <- do_exchange(amount, Map.get(rates, from), Map.get(rates, to)) do
       format = Keyword.get(opts, :format, :decimal)
       round = Keyword.get(opts, :round, 5)

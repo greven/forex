@@ -8,7 +8,7 @@ Forex is a ...
 
 ```elixir
 # Get the latest foreign exchange rates
-Forex.current_rates!()
+Forex.latest_rates!()
 ```
 
 ```elixir
@@ -18,12 +18,12 @@ Forex.get_currency("GBP")
 
 ```elixir
 # You can use the Feed moodule to fetch rates without any parsing applied
-Forex.Feed.fetch!(:current_rates)
+Forex.Feed.fetch!(:latest_rates)
 ```
 
 ```elixir
 # Or you can just use higher level functions to fetch and parse the xml output
-Forex.Feed.current_rates()
+Forex.Feed.latest_rates()
 ```
 
 ```elixir
