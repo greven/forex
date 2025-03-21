@@ -85,20 +85,24 @@ defmodule Forex.Support.CacheMock do
     if use_cache do
       case get(key, opts) do
         nil ->
-          case resolver.() do
-            {:ok, value} ->
-              put(key, value, DateTime.utc_now())
-              {:ok, value}
-
-            error ->
-              error
-          end
+          resolve_and_store(resolver, key)
 
         value ->
           {:ok, value}
       end
     else
       resolver.()
+    end
+  end
+
+  defp resolve_and_store(resolver, key) do
+    case resolver.() do
+      {:ok, value} ->
+        put(key, value, DateTime.utc_now())
+        {:ok, value}
+
+      error ->
+        error
     end
   end
 

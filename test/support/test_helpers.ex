@@ -1,4 +1,11 @@
 defmodule Forex.Support.TestHelpers do
+  @moduledoc """
+  Helper functions for setting up tests in the Forex application.
+  """
+
+  @doc """
+  Configure tests to use a mock cache module.
+  """
   def setup_test_cache do
     cache_module = Application.get_env(:forex, :cache_module)
     Application.put_env(:forex, :cache_module, Forex.Support.CacheMock)
