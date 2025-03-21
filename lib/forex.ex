@@ -1,10 +1,10 @@
 defmodule Forex do
   @external_resource "README.md"
-
   @moduledoc "README.md"
              |> File.read!()
              |> String.split("<!-- MDOC !-->")
              |> Enum.fetch!(1)
+             |> String.replace("### Usage Information", "### Usage Information {: .info}")
 
   @typedoc """
   The currency code is a three-letter code that represents a currency,

@@ -5,16 +5,14 @@
 `Forex` is a simple Elixir library that serves as a wrapper to the
 foreign exchange reference rates provided by the European Central Bank.
 
-> [!NOTE]
-> ### From the [European Central Bank](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)
+> ### Usage Information
 >
-> The reference rates are usually updated at around **16:00 CET** every working day, except on
+> The reference rates are usually updated at **around 16:00 CET** every working day, except on
 > [TARGET closing days](https://www.ecb.europa.eu/ecb/contacts/working-hours/html/index.en.html).
 >
-> They are based on the daily concertation procedure between central banks across Europe,
-> which normally takes place around 14:10 CET. The reference rates are published for
-> information purposes only. Using the rates for transaction
-> purposes is _strongly discouraged_.
+> They are based on the daily concertation procedure between central banks across Europe, which normally takes place around 14:10 CET. The reference rates are published for information purposes only. Using the rates for transaction purposes is **strongly discouraged**.
+>
+> _Source: [European Central Bank](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)_
 
 ## Motivation
 
