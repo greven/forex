@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.0](https://github.com/greven/forex.git/compare/v0.1.2...v0.2.0) (2025-03-21)
+
+
+
+
+### Features:
+
+* change `current_rates` to `latest_rates`
+
 ## [v0.1.2](https://github.com/greven/forex.git/compare/v0.1.1...v0.1.2) (2025-03-20)
 
 
