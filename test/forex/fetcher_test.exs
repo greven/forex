@@ -1,5 +1,5 @@
 defmodule Forex.FetcherTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   import Forex.Support.TestHelpers
   import Forex.Support.FeedFixtures
@@ -13,20 +13,6 @@ defmodule Forex.FetcherTest do
                schedular_interval: :timer.hours(12),
                use_cache: true
              }
-    end
-
-    test "the fetcher supervisor starts the fetcher process with the correct options" do
-      start_supervised!(Forex.Supervisor)
-
-      fetcher_pid = Process.whereis(Forex.Fetcher)
-
-      assert :sys.get_state(fetcher_pid) == %{
-               cache_module: Forex.Cache.ETS,
-               schedular_interval: :timer.hours(12),
-               use_cache: true
-             }
-
-      assert Forex.Cache.cache_mod() == Forex.Cache.ETS
     end
   end
 

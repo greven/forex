@@ -8,6 +8,14 @@ defmodule ForexTest do
   end
 
   describe "supervisor" do
+    test "returns the default options" do
+      assert Forex.Supervisor.options() == %{auto_start: true}
+    end
+
+    test "returns the options passed as arguments" do
+      assert Forex.Supervisor.options(auto_start: false) == %{auto_start: false}
+    end
+
     test "starts the fetcher process" do
       fetcher_supervisor_pid = Process.whereis(Forex.Supervisor)
       fetcher_pid = Process.whereis(Forex.Fetcher)
@@ -17,6 +25,18 @@ defmodule ForexTest do
       assert Forex.Supervisor.fetcher_initiated?()
       assert Forex.Supervisor.fetcher_status() == :running
       assert Forex.Supervisor.start_fetcher() == {:error, {:already_started, fetcher_pid}}
+    end
+
+    test "starts the fetcher process with the correct options" do
+      fetcher_pid = Process.whereis(Forex.Fetcher)
+
+      assert :sys.get_state(fetcher_pid) == %{
+               cache_module: Forex.Cache.ETS,
+               schedular_interval: :timer.hours(12),
+               use_cache: true
+             }
+
+      assert Forex.Cache.cache_mod() == Forex.Cache.ETS
     end
   end
 

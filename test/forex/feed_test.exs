@@ -1,9 +1,16 @@
 defmodule Forex.FeedTest do
   use ExUnit.Case, async: true
 
+  import Forex.Support.TestHelpers
   import Forex.Support.FeedFixtures
 
   alias Forex.Feed
+
+  setup_all do
+    setup_test_cache()
+
+    :ok
+  end
 
   describe "base_url/0" do
     test "returns the base URL for the European Central Bank (ECB)" do

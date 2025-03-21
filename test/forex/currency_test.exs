@@ -1,6 +1,7 @@
 defmodule Forex.CurrencyTest do
   use ExUnit.Case, async: true
 
+  import Forex.Support.TestHelpers
   import Forex.Support.FeedFixtures
 
   alias Forex.Currency
@@ -26,6 +27,12 @@ defmodule Forex.CurrencyTest do
     alt_names
     alt_symbols
   )a
+
+  setup_all do
+    setup_test_cache()
+
+    :ok
+  end
 
   describe "is_currency_code/1" do
     test "returns true for valid currency code formats" do
