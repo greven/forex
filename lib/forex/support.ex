@@ -278,4 +278,8 @@ defmodule Forex.Support do
 
     "#{Float.round(memory, 2)} MB"
   end
+
+  def cache_memory_usage(_) do
+    {:error, "Unsupported cache type"}
+  end
 end

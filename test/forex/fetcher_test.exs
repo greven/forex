@@ -7,12 +7,6 @@ defmodule Forex.FetcherTest do
   alias Forex.Fetcher
 
   describe "configuration and options" do
-    setup do
-      start_link_supervised!(Forex.Supervisor)
-
-      :ok
-    end
-
     test "the fetcher options have the correct defaults" do
       assert Forex.Fetcher.options() == %{
                cache_module: Forex.Cache.ETS,
@@ -21,18 +15,9 @@ defmodule Forex.FetcherTest do
              }
     end
 
-    test "the fetcher supervisor starts the fetcher process" do
-      fetcher_supervisor_pid = Process.whereis(Forex.Supervisor)
-      fetcher_pid = Process.whereis(Forex.Fetcher)
-
-      assert Process.alive?(fetcher_supervisor_pid)
-      assert Process.alive?(fetcher_pid)
-      assert Forex.Supervisor.fetcher_initiated?()
-      assert Forex.Supervisor.fetcher_status() == :running
-      assert Forex.Supervisor.start_fetcher() == {:error, {:already_started, fetcher_pid}}
-    end
-
     test "the fetcher supervisor starts the fetcher process with the correct options" do
+      start_supervised!(Forex.Supervisor)
+
       fetcher_pid = Process.whereis(Forex.Fetcher)
 
       assert :sys.get_state(fetcher_pid) == %{

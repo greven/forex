@@ -2,9 +2,22 @@ defmodule ForexTest do
   use ExUnit.Case, async: true
 
   setup_all do
-    start_link_supervised!(Forex.Supervisor)
+    start_supervised!(Forex.Supervisor)
 
     :ok
+  end
+
+  describe "supervisor" do
+    test "starts the fetcher process" do
+      fetcher_supervisor_pid = Process.whereis(Forex.Supervisor)
+      fetcher_pid = Process.whereis(Forex.Fetcher)
+
+      assert Process.alive?(fetcher_supervisor_pid)
+      assert Process.alive?(fetcher_pid)
+      assert Forex.Supervisor.fetcher_initiated?()
+      assert Forex.Supervisor.fetcher_status() == :running
+      assert Forex.Supervisor.start_fetcher() == {:error, {:already_started, fetcher_pid}}
+    end
   end
 
   describe "configuration and options" do
