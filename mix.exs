@@ -11,12 +11,21 @@ defmodule Forex.MixProject do
       elixir: "~> 1.16",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps(),
-      docs: docs(),
       aliases: aliases(),
+      deps: deps(),
+
+      # Tests
+      test_coverage: [
+        ignore_modules: test_coverage_ignored()
+      ],
+
+      # Hex
       package: package(),
       description: description(),
-      test_coverage: [ignore_modules: test_coverage_ignored()]
+
+      # Docs
+      name: "Forex",
+      docs: docs()
     ]
   end
 
@@ -57,7 +66,11 @@ defmodule Forex.MixProject do
       source_ref: @version,
       source_url: @source_url,
       canonical: "http://hexdocs.pm/forex",
-      extras: ["README.md", "CHANGELOG.md", "LICENSE"]
+      extras: [
+        "README.md": [title: "Introduction"],
+        "CHANGELOG.md": [title: "Changelog"],
+        LICENSE: [title: "License"]
+      ]
     ]
   end
 

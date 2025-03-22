@@ -1,5 +1,10 @@
 # Forex
 
+[![hex.pm badge](https://img.shields.io/badge/Package%20on%20hex.pm-informational)](https://hex.pm/packages/forex)
+[![Documentation badge](https://img.shields.io/badge/Documentation-ff69b4)][docs]
+[![CI](https://github.com/greven/forex/actions/workflows/ci.yml/badge.svg)](https://github.com/greven/forex/blob/main/.github/workflows/ci.yml)
+
+
 <!-- MDOC !-->
 
 `Forex` is a simple Elixir library that serves as a wrapper to the
@@ -169,7 +174,7 @@ iex> Forex.available_currencies()
 
 <!-- MDOC !-->
 
-Full documentation can be found at https://hexdocs.pm/forex.
+Full documentation can be found at [docs].
 
 ## Installation
 
@@ -186,4 +191,6 @@ end
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+[docs]: https://hexdocs.pm/forex
 
