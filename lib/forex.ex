@@ -83,7 +83,7 @@ defmodule Forex do
 
   """
   def json_library do
-    Application.get_env(:forex, :json_library, Jason)
+    Application.get_env(:forex, :json_library, JSON)
   end
 
   # The allowed currency codes for the schema options
