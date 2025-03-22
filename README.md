@@ -185,7 +185,7 @@ The package can be installed by adding `forex` to your list of dependencies in `
 ```elixir
 def deps do
   [
-    {:forex, "~> 0.2.1"}
+    {:forex, "~> 0.2.2"}
   ]
 end
 ```
