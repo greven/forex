@@ -1,5 +1,5 @@
 defmodule ForexTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   setup_all do
     start_supervised!(Forex.Supervisor)
