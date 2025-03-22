@@ -128,6 +128,10 @@ defmodule Forex.CacheTest do
 
     setup do
       Application.put_env(:forex, :cache_module, Forex.Cache.ETS)
+
+      on_exit(:reset_cache, fn ->
+        Application.delete_env(:forex, :cache_module)
+      end)
     end
 
     test "cache interface" do
@@ -153,6 +157,10 @@ defmodule Forex.CacheTest do
 
     setup do
       Application.put_env(:forex, :cache_module, Forex.Cache.DETS)
+
+      on_exit(:reset_cache, fn ->
+        Application.delete_env(:forex, :cache_module)
+      end)
     end
 
     test "persists data between process restarts" do
