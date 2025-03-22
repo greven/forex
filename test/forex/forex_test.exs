@@ -206,6 +206,15 @@ defmodule ForexTest do
       assert Enum.sort(Map.keys(rates)) == [:gbp, :usd]
     end
 
+    test "latest_rates/1 empty symbols option returns all rates" do
+      {:ok, %{rates: rates}} = Forex.latest_rates(symbols: [])
+
+      assert is_map(rates)
+      assert Map.has_key?(rates, :usd)
+      assert Map.has_key?(rates, :gbp)
+      assert Map.keys(rates) |> length() == 31
+    end
+
     test "latest_rates!/0 returns latest exchange rates" do
       %{rates: rates} = rate = Forex.latest_rates!()
 
@@ -421,13 +430,19 @@ defmodule ForexTest do
       assert decimal_places == 2
     end
 
-    test "get_historic_rate/1 raises DateError on invalid date" do
-      # assert_raise Forex.DateError, fn ->
-      #   Forex.get_historic_rate(~D[2025-02-31])
-      # end
+    test "get_historic_rate/1 returns error tuple on invalid date" do
+      assert Forex.get_historic_rate("invalid-date") == {:error, :invalid_date}
     end
 
-    test "get_historic_rate!/0 returns latest exchange rates" do
+    test "get_historic_rate/1 returns error tuple when feed is not available" do
+      assert Forex.get_historic_rate(
+               ~D[2024-10-25],
+               feed_fn: {Forex.FeedAPIMock, :get_historic_rates, [[type: :error]]},
+               use_cache: false
+             ) == {:error, "Feed API Error"}
+    end
+
+    test "get_historic_rate!/1 returns historic rates for a specific date" do
       rates = Forex.get_historic_rate!(~D[2024-10-25])
       rates_from_string = Forex.get_historic_rate!("2024-10-25")
 
@@ -448,6 +463,12 @@ defmodule ForexTest do
     test "get_historic_rate!/1 raises on non-existing dates" do
       assert_raise Forex.FeedError, fn ->
         Forex.get_historic_rate!(~D[1982-02-25])
+      end
+    end
+
+    test "get_historic_rate!/1 raises on invalid date" do
+      assert_raise Forex.DateError, fn ->
+        Forex.get_historic_rate!("invalid-date")
       end
     end
 
@@ -525,11 +546,11 @@ defmodule ForexTest do
 
   describe "last_updated/0" do
     test "returns the last updated date" do
-      # last_updated = Forex.last_updated()
+      last_updated = Forex.last_updated()
 
-      # assert is_list(last_updated)
-      # assert Keyword.has_key?(last_updated, :latest_rates)
-      # assert Keyword.has_key?(last_updated, :last_ninety_days_rates)
+      assert is_list(last_updated)
+      assert Keyword.has_key?(last_updated, :latest_rates)
+      assert Keyword.has_key?(last_updated, :last_ninety_days_rates)
     end
   end
 

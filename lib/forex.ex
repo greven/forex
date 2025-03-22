@@ -366,7 +366,7 @@ defmodule Forex do
   def get_historic_rate(date, opts) when is_binary(date) or is_tuple(date) do
     case parse_date(date) do
       {:ok, date} -> get_historic_rate(date, opts)
-      {:error, :invalid_date} -> raise Forex.DateError, "Invalid date format"
+      {:error, :invalid_date} -> {:error, :invalid_date}
     end
   end
 
@@ -383,10 +383,11 @@ defmodule Forex do
     end
   end
 
-  defp find_historic_rate_date(entries, date) do
+  @spec find_historic_rate_date([rate()], Date.t()) :: rate() | nil
+  defp find_historic_rate_date(entries, date) when is_list(entries) do
     Enum.find(entries, fn
       %{date: %Date{} = d} -> Date.compare(date, d) == :eq
-      _ -> false
+      _ -> nil
     end)
   end
 

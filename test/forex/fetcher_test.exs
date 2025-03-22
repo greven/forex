@@ -71,4 +71,21 @@ defmodule Forex.FetcherTest do
       refute Forex.Cache.cache_mod().get(:historic_rates)
     end
   end
+
+  describe "terminate/0" do
+    setup do
+      setup_test_cache()
+      Forex.Cache.cache_mod().init()
+
+      :ok
+    end
+
+    test "terminates the fetcher process with :normal reason" do
+      assert :ok == Fetcher.terminate(:normal, Forex.Fetcher.options())
+    end
+
+    test "terminates the fetcher process with :shutdown reason" do
+      assert :ok == Fetcher.terminate(:shutdown, Forex.Fetcher.options())
+    end
+  end
 end

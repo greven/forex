@@ -266,20 +266,4 @@ defmodule Forex.Support do
       _ -> nil
     end
   end
-
-  @doc """
-  Cache memory usage in megabytes.
-  Useful for debugging and monitoring the... cache memory usage.
-  """
-  def cache_memory_usage(:ets) do
-    words = :ets.info(:forex_cache, :memory)
-    word_size = :erlang.system_info(:wordsize)
-    memory = words * word_size / (1024 * 1024)
-
-    "#{Float.round(memory, 2)} MB"
-  end
-
-  def cache_memory_usage(_) do
-    {:error, "Unsupported cache type"}
-  end
 end

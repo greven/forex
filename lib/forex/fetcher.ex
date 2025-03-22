@@ -28,7 +28,6 @@ defmodule Forex.Fetcher do
   """
 
   use GenServer
-  require Logger
 
   alias __MODULE__
 
@@ -132,11 +131,6 @@ defmodule Forex.Fetcher do
   end
 
   @doc false
-  def terminate(reason, _config) do
-    Logger.error("[Forex.Fetcher] Terminate with #{inspect(reason)}")
-  end
-
-  @doc false
   def handle_info(:latest_rates, opts) do
     fetch_opts = Keyword.new(opts)
 
@@ -188,6 +182,4 @@ defmodule Forex.Fetcher do
   defp schedule_work(:last_ninety_days_rates, interval_ms) when is_integer(interval_ms) do
     Process.send_after(self(), :last_ninety_days_rates, interval_ms)
   end
-
-  defp schedule_work(_, _), do: :ok
 end
