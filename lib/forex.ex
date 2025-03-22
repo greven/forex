@@ -139,6 +139,7 @@ defmodule Forex do
     |> Enum.map(fn {code, currency} ->
       {currency.name, code}
     end)
+    |> Enum.sort()
   end
 
   def currency_options(:strings) do
@@ -146,6 +147,7 @@ defmodule Forex do
     |> Enum.map(fn {code, currency} ->
       {currency.name, code}
     end)
+    |> Enum.sort()
   end
 
   @doc """
