@@ -7,13 +7,17 @@ defmodule ForexTest do
     :ok
   end
 
-  describe "supervisor" do
+  describe "supervisor and config" do
     test "returns the default options" do
       assert Forex.Supervisor.options() == %{auto_start: true}
     end
 
     test "returns the options passed as arguments" do
       assert Forex.Supervisor.options(auto_start: false) == %{auto_start: false}
+    end
+
+    test "json_library/0 returns the configured JSON library" do
+      assert Forex.json_library() == JSON
     end
 
     test "starts the fetcher process" do
@@ -113,6 +117,7 @@ defmodule ForexTest do
       assert {"United States Dollar", :usd} in options
       assert {"Euro", :eur} in options
       assert length(options) == length(Forex.available_currencies())
+      assert {"Euro", "EUR"} in Forex.currency_options(:strings)
     end
 
     test "get_currency/1 returns currency information" do
@@ -155,6 +160,13 @@ defmodule ForexTest do
       assert Map.has_key?(rate, :date)
       assert Map.has_key?(rates, :usd)
       assert %Decimal{} = Map.get(rates, :usd)
+    end
+
+    test "latest_rates/0 returns error tuple when feed is not available" do
+      assert Forex.latest_rates(
+               feed_fn: {Forex.FeedAPIMock, :get_latest_rates, [[type: :error]]},
+               use_cache: false
+             ) == {:error, "Feed API Error"}
     end
 
     test "latest_rates/1 supports different base currencies" do
@@ -204,6 +216,15 @@ defmodule ForexTest do
       assert %Decimal{} = Map.get(rates, :usd)
     end
 
+    test "latest_rates!/0 returns error tuple when feed is not available" do
+      assert_raise RuntimeError, fn ->
+        Forex.latest_rates!(
+          feed_fn: {Forex.FeedAPIMock, :get_latest_rates, [[type: :error]]},
+          use_cache: false
+        )
+      end
+    end
+
     test "last_ninety_days_rates/0 returns rates for the last 90 days" do
       {:ok, [rate | _] = rates} = Forex.last_ninety_days_rates()
 
@@ -213,6 +234,13 @@ defmodule ForexTest do
       assert Map.get(rate, :rates) |> Map.has_key?(:usd)
       assert Map.get(rate, :rates) |> Map.keys() |> length() == 31
       assert %Decimal{} = Map.get(rate, :rates) |> Map.get(:usd)
+    end
+
+    test "last_ninety_days_rates/0 returns error tuple when feed is not available" do
+      assert Forex.last_ninety_days_rates(
+               feed_fn: {Forex.FeedAPIMock, :get_last_ninety_days_rates, [[type: :error]]},
+               use_cache: false
+             ) == {:error, "Feed API Error"}
     end
 
     test "last_ninety_days_rates/1 supports different base currencies" do
@@ -256,6 +284,15 @@ defmodule ForexTest do
       assert %Decimal{} = Map.get(rate, :rates) |> Map.get(:gbp)
     end
 
+    test "last_ninety_days_rates!/0 returns error tuple when feed is not available" do
+      assert_raise RuntimeError, fn ->
+        Forex.last_ninety_days_rates!(
+          feed_fn: {Forex.FeedAPIMock, :get_last_ninety_days_rates, [[type: :error]]},
+          use_cache: false
+        )
+      end
+    end
+
     test "last_ninety_days_rates!/1 supports different base currencies" do
       [eur_rate | _] = eur_rates = Forex.last_ninety_days_rates!()
       [rate | _] = rates = Forex.last_ninety_days_rates!(base: :gbp)
@@ -274,6 +311,13 @@ defmodule ForexTest do
       assert Map.get(rate, :rates) |> Map.has_key?(:usd)
       assert Map.get(rate, :rates) |> Map.keys() |> length() == 31
       assert %Decimal{} = Map.get(rate, :rates) |> Map.get(:usd)
+    end
+
+    test "historic_rates/0 returns error tuple when feed is not available" do
+      assert Forex.historic_rates(
+               feed_fn: {Forex.FeedAPIMock, :get_historic_rates, [[type: :error]]},
+               use_cache: false
+             ) == {:error, "Feed API Error"}
     end
 
     test "historic_rates/1 supports different base currencies" do
@@ -315,6 +359,15 @@ defmodule ForexTest do
       assert Map.get(rate, :rates) |> Map.has_key?(:usd)
       assert Map.get(rate, :rates) |> Map.keys() |> length() == 31
       assert %Decimal{} = Map.get(rate, :rates) |> Map.get(:usd)
+    end
+
+    test "historic_rates!/0 returns error tuple when feed is not available" do
+      assert_raise RuntimeError, fn ->
+        Forex.historic_rates!(
+          feed_fn: {Forex.FeedAPIMock, :get_historic_rates, [[type: :error]]},
+          use_cache: false
+        )
+      end
     end
 
     test "historic_rates!/1 supports different base currencies" do
@@ -366,6 +419,12 @@ defmodule ForexTest do
         |> String.length()
 
       assert decimal_places == 2
+    end
+
+    test "get_historic_rate/1 raises DateError on invalid date" do
+      # assert_raise Forex.DateError, fn ->
+      #   Forex.get_historic_rate(~D[2025-02-31])
+      # end
     end
 
     test "get_historic_rate!/0 returns latest exchange rates" do

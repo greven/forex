@@ -1,4 +1,4 @@
-defmodule Forex.Support.TestHelpers do
+defmodule Forex.TestHelpers do
   @moduledoc """
   Helper functions for setting up tests in the Forex application.
   """
@@ -8,7 +8,7 @@ defmodule Forex.Support.TestHelpers do
   """
   def setup_test_cache do
     cache_module = Application.get_env(:forex, :cache_module)
-    Application.put_env(:forex, :cache_module, Forex.Support.CacheMock)
+    Application.put_env(:forex, :cache_module, Forex.CacheMock)
 
     ExUnit.Callbacks.on_exit(fn ->
       if cache_module do

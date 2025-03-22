@@ -1,8 +1,8 @@
 defmodule Forex.FetcherTest do
   use ExUnit.Case
 
-  import Forex.Support.TestHelpers
-  import Forex.Support.FeedFixtures
+  import Forex.TestHelpers
+  import Forex.FeedFixtures
 
   alias Forex.Fetcher
 

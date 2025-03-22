@@ -1,7 +1,7 @@
 defmodule Forex.ParserTest do
   use ExUnit.Case, async: true
 
-  import Forex.Support.FeedFixtures
+  import Forex.FeedFixtures
 
   alias Forex.Feed
 

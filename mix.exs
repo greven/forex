@@ -96,7 +96,6 @@ defmodule Forex.MixProject do
 
   defp test_coverage_ignored do
     [
-      ~r(Forex.Support.*),
       ~r(Mix.*),
       Forex.Supervisor,
       Forex.CurrencyError,

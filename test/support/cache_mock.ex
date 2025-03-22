@@ -1,4 +1,4 @@
-defmodule Forex.Support.CacheMock do
+defmodule Forex.CacheMock do
   @moduledoc """
   InMemory implementation of the Forex.Cache behaviour using process dictionary.
   Provides isolation for concurrent tests without ETS table conflicts.

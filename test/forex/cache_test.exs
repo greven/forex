@@ -1,7 +1,7 @@
 defmodule Forex.CacheTest do
   use ExUnit.Case
 
-  import Forex.Support.TestHelpers
+  import Forex.TestHelpers
 
   # Define cache implementation tests for shared behaviour
   defmodule CacheTests do
@@ -182,7 +182,7 @@ defmodule Forex.CacheTest do
       cache = Forex.Cache.cache_mod()
       now = DateTime.utc_now()
 
-      assert cache in [Forex.Cache.ETS, Forex.Cache.DETS, Forex.Support.CacheMock]
+      assert cache in [Forex.Cache.ETS, Forex.Cache.DETS, Forex.CacheMock]
 
       Forex.Cache.reset()
       Forex.Cache.init()

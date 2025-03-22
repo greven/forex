@@ -1,4 +1,4 @@
-defmodule Forex.Support.FeedFixtures do
+defmodule Forex.FeedFixtures do
   @moduledoc false
 
   alias Forex.Feed

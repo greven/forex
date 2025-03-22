@@ -1,8 +1,8 @@
 defmodule Forex.FeedTest do
   use ExUnit.Case, async: true
 
-  import Forex.Support.TestHelpers
-  import Forex.Support.FeedFixtures
+  import Forex.TestHelpers
+  import Forex.FeedFixtures
 
   alias Forex.Feed
 
@@ -34,7 +34,7 @@ defmodule Forex.FeedTest do
 
   describe "api_mod/0" do
     test "returns the API adapter module" do
-      assert Feed.api_mod() == Forex.Support.FeedAPIMock
+      assert Feed.api_mod() == Forex.FeedAPIMock
     end
   end
 

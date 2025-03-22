@@ -1,8 +1,8 @@
 defmodule Forex.CurrencyTest do
   use ExUnit.Case, async: true
 
-  import Forex.Support.TestHelpers
-  import Forex.Support.FeedFixtures
+  import Forex.TestHelpers
+  import Forex.FeedFixtures
 
   alias Forex.Currency
 

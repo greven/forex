@@ -1,9 +1,9 @@
-defmodule Forex.Support.FeedAPIMock do
+defmodule Forex.FeedAPIMock do
   @moduledoc false
 
   @behaviour Forex.Feed.API
 
-  import Forex.Support.FeedFixtures
+  import Forex.FeedFixtures
 
   @impl true
   def get_latest_rates(type: :error) do
