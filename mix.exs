@@ -1,7 +1,7 @@
 defmodule Forex.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.2.1"
   @source_url "https://github.com/greven/forex"
 
   def project do
@@ -90,6 +90,7 @@ defmodule Forex.MixProject do
   defp aliases do
     [
       "test.all": "test --include integration",
+      release: "git_ops.release",
       credo: ["credo --strict"]
     ]
   end

@@ -5,6 +5,19 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v0.2.1](https://github.com/greven/forex.git/compare/v0.2.0...v0.2.1) (2025-03-22)
+
+
+
+
+### Bug Fixes:
+
+* tests
+
+### Improvements:
+
+* sort currency_options
+
 ## [v0.2.0](https://github.com/greven/forex.git/compare/v0.1.2...v0.2.0) (2025-03-21)
 
 
