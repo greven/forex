@@ -5,6 +5,14 @@ defmodule Mix.Tasks.Forex.Export.Ninety do
 
     mix forex.export.ninety
 
+  By default the JSON encoder used is the Elixir standard library JSON encoder (only
+  support in Elixir 1.18+). You can change this by setting the `:json_library` option
+  in your config, for example to use `Jason` instead:
+
+      config :forex, json_library: Jason
+
+  Refer to `Forex.json_library/0` for more information.
+
   ## Examples
 
     * `mix forex.export.ninety`

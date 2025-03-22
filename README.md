@@ -30,6 +30,8 @@ that fetches the data from the European Central Bank and caches it for later use
 
 ## Options
 
+Every rate function (`latest_rates/1`, `last_ninety_days_rates/1`, `historic_rates/1`, `get_historic_rate/2`, `get_historic_rates_between/3` and its variations) in the main module(`Forex`) accepts a set of options that can be used to customize the format of the output. The options are:
+
 * `:base` - The base currency to convert the rates to. The default currency base is `:eur`.
 
 * `:format` - The format of the rate value. Supported values are `:decimal` and `:string`.
