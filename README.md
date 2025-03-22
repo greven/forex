@@ -1,9 +1,9 @@
 # Forex
 
-[![hex.pm badge](https://img.shields.io/badge/Package%20on%20hex.pm-informational)](https://hex.pm/packages/forex)
-[![Documentation badge](https://img.shields.io/badge/Documentation-ff69b4)][docs]
-[![CI](https://github.com/greven/forex/actions/workflows/ci.yml/badge.svg)](https://github.com/greven/forex/blob/main/.github/workflows/ci.yml)
-
+[![hex.pm badge](https://img.shields.io/hexpm/v/forex?style=for-the-badge&labelColor=000)](https://hex.pm/packages/forex)
+[![Documentation badge](https://img.shields.io/badge/Docs-3B82F6?style=for-the-badge&labelColor=000)][DOCS]
+[![CI badge](https://img.shields.io/github/actions/workflow/status/greven/forex/ci.yml?style=for-the-badge&labelColor=000)](https://github.com/greven/forex/blob/main/.github/workflows/ci.yml)
+[![License badge](https://img.shields.io/hexpm/l/forex?style=for-the-badge&labelColor=000)](LICENSE)
 
 <!-- MDOC !-->
 
@@ -176,7 +176,7 @@ iex> Forex.available_currencies()
 
 <!-- MDOC !-->
 
-Full documentation can be found at [docs].
+Full documentation can be found at [DOCS].
 
 ## Installation
 
@@ -194,5 +194,4 @@ end
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-[docs]: https://hexdocs.pm/forex
-
+[DOCS]: https://hexdocs.pm/forex
