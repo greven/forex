@@ -179,7 +179,11 @@ defmodule Forex do
   ## Examples
 
   ```elixir
-  {:ok, %{base: :eur, date: ~D[2025-03-12], rates: %{usd: Decimal.new("1.1234"), jpy: Decimal.new("120.1234"), ...}}}
+  {:ok, %Forex{
+    base: :eur,
+    date: ~D[2025-03-12],
+    rates: %{usd: Decimal.new("1.1234"), jpy: Decimal.new("120.1234"), ...}}
+  }
   ```
   """
   @spec latest_rates(opts :: [Options.rates_option()]) :: {:ok, t()} | {:error, term}
@@ -191,7 +195,7 @@ defmodule Forex do
       {:ok, entries} ->
         result =
           Enum.map(entries, fn %{time: datetime, rates: rates} ->
-            %{
+            %Forex{
               base: base,
               date: map_date(datetime),
               rates: map_rates(rates, opts)
@@ -240,7 +244,7 @@ defmodule Forex do
         results =
           entries
           |> Stream.map(fn %{time: datetime, rates: rates} ->
-            %{
+            %Forex{
               base: base,
               date: map_date(datetime),
               rates: map_rates(rates, opts)
@@ -288,7 +292,7 @@ defmodule Forex do
         results =
           entries
           |> Stream.map(fn %{time: datetime, rates: rates} ->
-            %{
+            %Forex{
               base: base,
               date: map_date(datetime),
               rates: map_rates(rates, opts)
@@ -387,10 +391,10 @@ defmodule Forex do
   ```elixir
   iex> Forex.get_historic_rates_between("2023-01-01", "2023-01-05")
   {:ok, [
-    %{date: ~D[2023-01-02], base: :eur, rates: %{usd: Decimal.new("1.0678", ...}},
-    %{date: ~D[2023-01-03], base: :eur, rates: %{usd: Decimal.new("1.0545", ...}},
-    %{date: ~D[2023-01-04], base: :eur, rates: %{usd: Decimal.new("1.0599", ...}},
-    %{date: ~D[2023-01-05], base: :eur, rates: %{usd: Decimal.new("1.0556", ...}}
+    %Forex{date: ~D[2023-01-02], base: :eur, rates: %{usd: Decimal.new("1.0678", ...}},
+    %Forex{date: ~D[2023-01-03], base: :eur, rates: %{usd: Decimal.new("1.0545", ...}},
+    %Forex{date: ~D[2023-01-04], base: :eur, rates: %{usd: Decimal.new("1.0599", ...}},
+    %Forex{date: ~D[2023-01-05], base: :eur, rates: %{usd: Decimal.new("1.0556", ...}}
   ]}
   ```
   """
