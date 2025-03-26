@@ -65,6 +65,14 @@ defmodule Forex.MixProject do
     ]
   end
 
+  # Run "mix help compile.app" to learn about applications.
+  def application do
+    [
+      mod: {Forex.Application, [strategy: :one_for_one, name: Forex.Supervisor]},
+      extra_applications: [:logger]
+    ]
+  end
+
   defp description() do
     """
     A simple library for fetching and converting foreign exchange rates based on ECB data.
@@ -112,7 +120,7 @@ defmodule Forex.MixProject do
     [
       ~r(Mix.*),
       Forex.FeedFixtures,
-      Forex.Supervisor,
+      Forex.Fetcher.Supervisor,
       Forex.CurrencyError,
       Forex.FeedError,
       Forex.DateError

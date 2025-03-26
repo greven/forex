@@ -22,9 +22,6 @@ defmodule Forex.Fetcher do
 
   * `schedular_interval` - The interval in milliseconds to fetch the exchange rates
     from the feed. The default value is `12 hours`.
-
-  To start the `Forex.Fetcher` process, use the `start_link/1` or `start/1` functions,
-  or add the `Forex.Supervisor` to the application supervision tree.
   """
 
   use GenServer
@@ -76,7 +73,7 @@ defmodule Forex.Fetcher do
 
   @doc false
   def start(opts \\ Fetcher.options()) do
-    Forex.Supervisor.start_fetcher(opts)
+    Forex.Fetcher.Supervisor.start_fetcher(opts)
   end
 
   @doc """

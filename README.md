@@ -10,12 +10,13 @@
 `Forex` is a simple Elixir library that serves as a wrapper to the
 foreign exchange reference rates provided by the European Central Bank.
 
-> ### Usage Information
+> ### ECB Exchange Rates Important Notice
 >
 > The reference rates are usually updated at **around 16:00 CET** every working day, except on
 > [TARGET closing days](https://www.ecb.europa.eu/ecb/contacts/working-hours/html/index.en.html).
 >
-> They are based on the daily concertation procedure between central banks across Europe, which normally takes place around 14:10 CET. The reference rates are published for information purposes only. Using the rates for transaction purposes is **strongly discouraged**.
+> They are based on the daily concertation procedure between central banks across Europe, which normally takes place around 14:10 CET.
+> The reference rates are published for **information purposes only**. Using the rates for transaction purposes is **strongly discouraged**.
 >
 > _Source: [European Central Bank](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html)_
 
@@ -27,6 +28,28 @@ of providing access to currency exchange rates for projects that want to self-ho
 the data and not rely on third-party paid services in a simple and straightforward
 manner. No API keys, no authentication, no rate limits, just a simple Elixir library
 that fetches the data from the European Central Bank and caches it for later use.
+
+If you need a more advanced library that provides additional features and allows you
+to fetch exchange rates from multiple sources, you should check out
+the excellent [money](https://github.com/kipcole9/money).
+
+## Supervision
+
+By default, `Forex` starts with your application which in turn starts the `Forex.Supervisor`. If you
+don't want to start the `Forex` supervision tree by default, you can pass the `runtime: false` option
+to the `forex` dependency in your `mix.exs` file:
+
+```elixir
+def deps do
+  [
+    {:forex, "~> 0.2.2", runtime: false}
+  ]
+end
+```
+
+The `Forex` supervision tree is responsible for fetching the exchange rates from the European Central Bank
+and caching them for later use. If you want to start the `Forex.Fetcher` manually, you can do so by calling
+the `Forex.Fetcher.Supervisor.start_link/1` function in your application supervision tree.
 
 ## Usage
 
@@ -116,6 +139,29 @@ iex> Forex.available_currencies()
 ```
 
 <!-- MDOC !-->
+
+## Mix Tasks
+
+`Forex` provides a mix task to fetch exchange rates from the European Central Bank and export them to
+a `json` file. There are three mix tasks available:
+
+- `mix forex.export.latest` - fetches the latest exchange rates from the European Central Bank and exports them to a `json` file.
+- `mix forex.export.ninety` - fetches the last ninety days exchange rates from the European Central Bank and exports them to a `json` file.
+- `mix forex.export.historic` - fetches the historic exchange rates from the European Central Bank and exports them to a `json` file.
+
+Check the mix tasks documentation for more information on how to use them.
+
+### Note
+
+The mix tasks `json` encoder uses the Elixir 1.18 `JSON` module by default. If you are using an older version of Elixir,
+you can use any other JSON library (for example [Jason](https://hex.pm/packages/jason)) as long as the library
+implements the `encode_to_iodata!/2` function. This can be configured by setting
+the `json_library` option in the `config.exs` file of your project:
+
+```elixir
+config :forex, json_library: Jason
+```
+
 
 ## Installation
 

@@ -1,8 +1,7 @@
 defmodule Forex.Options do
   @moduledoc """
-  Options/configuration module for the Forex.Supervisor and rates functions (`latest_rates/1`,
-  `last_ninety_days_rates/1`, `historic_rates/1`, `get_historic_rate/2`, `get_historic_rates_between/3`
-  and its variations).
+  Options/configuration module for the Forex.Fetcher.Supervisor and the rates functions
+  (`latest_rates/1`, `last_ninety_days_rates/1`, etc.) in the `Forex` module.
   """
 
   @currency_atoms ~w(

@@ -1,11 +1,10 @@
-defmodule Forex.Supervisor do
+defmodule Forex.Fetcher.Supervisor do
   @moduledoc """
-  Supervisor for the Forex supervision tree.
+  Supervisor for the Forex.Fetcher module that fetches exchange rates.
 
-  The `Forex.Supervisor` module is responsible for supervising the `Forex.Fetcher`
-  process, .ie., starting, stopping, and restarting the process.
+  The Supervisor provides functionality to start, stop and restarting the `Forex.Fetcher`.
 
-  The `Forex.Supervisor` accepts the following options:
+  The `Forex.Fetcher.Supervisor` accepts the following options:
 
   * `auto_start` - A boolean value that determines if the fetcher process should be started
     automatically when the supervisor is started. The default value is `true`.
