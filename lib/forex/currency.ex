@@ -670,6 +670,8 @@ defmodule Forex.Currency do
 
   @doc """
   Exchange a given amount from one currency to another using ECB rates.
+  Always uses the latest rates available. If you want to provide a specific
+  rates to use with the exchange, use `Forex.exchange_rates/5`.
 
   ## Options
   #{NimbleOptions.docs(Forex.Options.currency_schema())}
@@ -696,23 +698,14 @@ defmodule Forex.Currency do
   def exchange(amount, from_currency, to_currency, opts)
       when is_currency_amount(amount) and is_currency_code(from_currency) and
              is_currency_code(to_currency) do
-    with from <- Support.stringify_code(from_currency),
-         to <- Support.stringify_code(to_currency),
-         {:ok, _} <- validate_currencies(from, to),
-         {:ok, %{rates: rates}} <- Forex.latest_rates(base: from, keys: :strings) do
-      opts = Options.currency_options(opts)
+    with from_currency <- Support.stringify_code(from_currency),
+         to_currency <- Support.stringify_code(to_currency),
+         {:ok, _} <- validate_currencies(from_currency, to_currency),
+         {:ok, %{rates: rates}} <- Forex.latest_rates(base: from_currency, keys: :strings) do
+      from_rate = Map.get(rates, from_currency)
+      to_rate = Map.get(rates, to_currency)
 
-      from_rates = Map.get(rates, from)
-      to_rates = Map.get(rates, to)
-
-      new_amount =
-        amount
-        |> Support.format_value(:decimal)
-        |> Decimal.mult(Decimal.div(to_rates, from_rates))
-        |> Support.round_value(opts[:round])
-        |> Support.format_value(opts[:format])
-
-      {:ok, new_amount}
+      {:ok, do_exchange(amount, from_rate, to_rate, opts)}
     else
       {:error, reason} -> {:error, reason}
     end
@@ -738,6 +731,45 @@ defmodule Forex.Currency do
     end
   end
 
+  @doc """
+  Like `exchange/4`, but uses the provided rates instead of using the latest
+  available rates. This is useful for example if we want to use historical rates.
+  """
+  @spec exchange_rates(
+          rates :: %{code() => output_amount()},
+          amount :: input_amount(),
+          from_currency :: code(),
+          to_currency :: code(),
+          opts :: [Options.currency_option()]
+        ) ::
+          {:ok, output_amount()} | {:error, term()}
+  def exchange_rates(rates, amount, from_currency, to_currency, opts \\ [])
+
+  def exchange_rates(rates, amount, from_currency, to_currency, opts)
+      when is_map(rates) and is_currency_amount(amount) and is_currency_code(from_currency) and
+             is_currency_code(to_currency) do
+    with from <- Support.stringify_code(from_currency),
+         to <- Support.stringify_code(to_currency),
+         {:ok, _} <- validate_currencies(from, to) do
+      from_rate = Map.get(rates, from_currency)
+      to_rate = Map.get(rates, to_currency)
+
+      {:ok, do_exchange(amount, from_rate, to_rate, opts)}
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Like `exchange_rates/5`, but raises a `Forex.CurrencyError` if the exchange fails.
+  """
+  def exchange_rates!(rates, amount, from_currency, to_currency, opts \\ []) do
+    case exchange_rates(rates, amount, from_currency, to_currency, opts) do
+      {:ok, result} -> result
+      {:error, reason} -> raise Forex.CurrencyError, "Currency exchange failed: #{reason}"
+    end
+  end
+
   @spec validate_currencies(from :: code(), to :: code()) ::
           {:ok, {code(), code()}} | {:error, :invalid_currency}
   defp validate_currencies(from, to) do
@@ -745,6 +777,22 @@ defmodule Forex.Currency do
       {true, true} -> {:ok, {from, to}}
       _ -> {:error, :invalid_currency}
     end
+  end
+
+  @spec do_exchange(
+          amount :: input_amount(),
+          from_rate :: input_amount(),
+          to_rate :: input_amount(),
+          opts :: [Options.currency_option()]
+        ) :: output_amount()
+  defp do_exchange(amount, from_rate, to_rate, opts) do
+    opts = Options.currency_options(opts)
+
+    amount
+    |> Support.format_value(:decimal)
+    |> Decimal.mult(Decimal.div(to_rate, from_rate))
+    |> Support.round_value(opts[:round])
+    |> Support.format_value(opts[:format])
   end
 
   ## Helpers

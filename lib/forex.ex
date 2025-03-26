@@ -9,6 +9,7 @@ defmodule Forex do
   import Forex.Support
   import Forex.Options, only: [rates_options: 1]
 
+  alias __MODULE__
   alias Forex.Options
   alias Forex.Currency
   alias Forex.Fetcher
@@ -129,9 +130,7 @@ defmodule Forex do
   Bank (ECB) or fetch the latest rates if the cache is disabled.
 
   ## Options
-
-  * `:format` - The format of the rate value. Supported values are `:decimal` and `:string`. The default is `:decimal`.
-  * `:round` - The number of decimal places to round the rate value to. The default is `4`.
+  #{NimbleOptions.docs(Forex.Options.currency_schema())}
 
   ## Examples
 
@@ -167,6 +166,46 @@ defmodule Forex do
         ) :: Currency.output_amount()
   def exchange!(amount, from, to, opts \\ []),
     do: Currency.exchange!(amount, from, to, opts)
+
+  @doc """
+  Given a specific date, amount, and two currencies, it will return the
+  exchange rate for that date.
+
+  ## Options
+  #{NimbleOptions.docs(Forex.Options.currency_schema())}
+
+  ## Examples
+
+  ```elixir
+  iex> Forex.exchange_historic_rate("2023-01-01", 100, "USD", "EUR")
+  {:ok, Decimal.new("91.86100")}
+  iex> Forex.exchange_historic_rate(~D[2023-01-01], 420, :eur, :gbp, format: :string)
+  {:ok, "353.12760"}
+  """
+  @spec exchange_historic_rate(
+          date :: maybe_date(),
+          amount :: Currency.input_amount(),
+          from :: Currency.code(),
+          to :: Currency.code(),
+          opts :: [Options.rates_option()]
+        ) :: {:ok, Currency.output_amount()} | {:error, term}
+  def exchange_historic_rate(date, amount, from, to, opts \\ []) do
+    case get_historic_rate(date, opts) do
+      {:ok, %Forex{rates: rates}} -> Currency.exchange_rates(rates, amount, from, to, opts)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Same as `exchange_historic_rate/5`, but raises an error if the request fails.
+  """
+  def exchange_historic_rate!(date, amount, from, to, opts \\ []) do
+    case get_historic_rate(date, opts) do
+      {:ok, %Forex{rates: rates}} -> Currency.exchange_rates!(rates, amount, from, to, opts)
+      {:error, {exception, reason}} -> raise exception, reason
+      {:error, reason} -> raise Forex.FeedError, reason
+    end
+  end
 
   ## Exchange Rates
 
@@ -243,7 +282,7 @@ defmodule Forex do
       {:ok, entries} ->
         results =
           entries
-          |> Stream.map(fn %{time: datetime, rates: rates} ->
+          |> Enum.map(fn %{time: datetime, rates: rates} ->
             %Forex{
               base: base,
               date: map_date(datetime),
@@ -291,7 +330,7 @@ defmodule Forex do
       {:ok, entries} ->
         results =
           entries
-          |> Stream.map(fn %{time: datetime, rates: rates} ->
+          |> Enum.map(fn %{time: datetime, rates: rates} ->
             %Forex{
               base: base,
               date: map_date(datetime),
@@ -327,7 +366,7 @@ defmodule Forex do
   #{NimbleOptions.docs(Forex.Options.rates_schema())}
   """
   @spec get_historic_rate(maybe_date(), opts :: [Options.rates_option()]) ::
-          {:ok, rate()} | {:error, term}
+          {:ok, t()} | {:error, term}
   def get_historic_rate(date, opts \\ [])
 
   def get_historic_rate(date, opts) when is_binary(date) or is_tuple(date) do
@@ -339,10 +378,10 @@ defmodule Forex do
 
   def get_historic_rate(%Date{calendar: Calendar.ISO} = date, opts) when is_list(opts) do
     case historic_rates(opts) do
-      {:ok, entries} ->
-        case find_historic_rate_date(entries, date) do
-          nil -> {:error, {Forex.DateError, "Rate not found for date: #{Date.to_iso8601(date)}"}}
-          entry -> {:ok, entry.rates}
+      {:ok, rates} ->
+        case find_historic_rate_date(rates, date) do
+          nil -> {:error, {Forex.FeedError, "Rate not found for date: #{Date.to_iso8601(date)}"}}
+          historic_rate -> {:ok, historic_rate}
         end
 
       {:error, reason} ->
@@ -350,9 +389,9 @@ defmodule Forex do
     end
   end
 
-  @spec find_historic_rate_date(entries :: [t()], date :: Date.t()) :: t() | nil
-  defp find_historic_rate_date(entries, date) when is_list(entries) do
-    Enum.find(entries, fn
+  @spec find_historic_rate_date(rates :: [t()], date :: Date.t()) :: t() | nil
+  defp find_historic_rate_date(rates, date) when is_list(rates) do
+    Enum.find(rates, fn
       %{date: %Date{} = d} -> Date.compare(date, d) == :eq
       _ -> nil
     end)
@@ -361,7 +400,7 @@ defmodule Forex do
   @doc """
   Same as `get_historic_rate/2`, but raises an error if the request fails.
   """
-  @spec get_historic_rate!(maybe_date(), opts :: [Options.rates_option()]) :: rate()
+  @spec get_historic_rate!(maybe_date(), opts :: [Options.rates_option()]) :: t()
   def get_historic_rate!(date, opts \\ [])
 
   def get_historic_rate!(date, opts) when is_binary(date) or is_tuple(date) do
@@ -374,6 +413,7 @@ defmodule Forex do
   def get_historic_rate!(%Date{calendar: Calendar.ISO} = date, opts) when is_list(opts) do
     case get_historic_rate(date, opts) do
       {:ok, rates} -> rates
+      {:error, {exception, reason}} -> raise exception, reason
       {:error, reason} -> raise Forex.FeedError, reason
     end
   end
@@ -502,7 +542,7 @@ defmodule Forex do
     |> case do
       {:ok, rebased_rates} ->
         rebased_rates
-        |> Stream.map(fn %{currency: currency, rate: value} ->
+        |> Enum.map(fn %{currency: currency, rate: value} ->
           {maybe_atomize_code(currency, opts[:keys]), rate_value(value, opts)}
         end)
         |> Enum.into(%{})

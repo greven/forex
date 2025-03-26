@@ -363,7 +363,7 @@ defmodule ForexTest do
     end
 
     test "get_historic_rate/1 returns nil for non-existing dates" do
-      assert {:error, {Forex.DateError, "Rate not found for date: 1982-02-25"}} ==
+      assert {:error, {Forex.FeedError, "Rate not found for date: 1982-02-25"}} ==
                Forex.get_historic_rate(~D[1982-02-25])
     end
 
