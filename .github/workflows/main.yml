@@ -10,22 +10,27 @@ jobs:
   test:
     name: Build and test
     runs-on: ubuntu-latest
+    env:
+      MIX_ENV: test
 
     strategy:
+      fail-fast: false
       matrix:
         elixir: [1.16]
         otp: [26.0]
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Check out repository
+      uses: actions/checkout@v4
 
-    - name: Setup Erlang/OTP/Elixir environment
+    - name: Install Erlang/OTP and Elixir
       uses: erlef/setup-beam@v1
       with:
-        elixir-version: ${{ matrix.elixir }}
         otp-version: ${{ matrix.otp }}
+        elixir-version: ${{ matrix.elixir }}
+        version-type: strict
 
-    - name: Restore dependencies cache
+    - name: Cache Mix dependencies
       uses: actions/cache@v4
       id: cache-deps
       env:
@@ -48,16 +53,19 @@ jobs:
           ${{ runner.os }}-mix-
 
     - name: Install dependencies
-      run: mix deps.get
-
-    - name: Run compilers
-      run: mix compile --warnings-as-errors
+      run: mix deps.get --check-locked
 
     - name: Check formatting
       run: mix format --check-formatted
 
+    - name: Check for unused dependencies
+      run: mix deps.unlock --check-unused
+
+    - name: Check for compilation warnings
+      run: mix compile --warnings-as-errors
+
+    - name: Run credo checks
+      run: mix credo --strict
+
     - name: Run tests
       run: mix test
-
-    - name: Run credo
-      run: mix credo --strict
