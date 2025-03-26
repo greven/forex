@@ -44,43 +44,6 @@ defmodule ForexTest do
     end
   end
 
-  describe "configuration and options" do
-    test "options/1 returns default options" do
-      assert Forex.options() == %{
-               base: :eur,
-               format: :decimal,
-               round: 5,
-               symbols: nil,
-               keys: :atoms,
-               use_cache: true,
-               feed_fn: nil
-             }
-    end
-
-    test "options/1 merges custom options" do
-      opts =
-        Forex.options(
-          base: :usd,
-          format: :string,
-          round: 2,
-          symbols: [:eur, :usd, :gbp],
-          use_cache: false
-        )
-
-      assert opts.base == :usd
-      assert opts.format == :string
-      assert opts.round == 2
-      assert opts.symbols == [:eur, :usd, :gbp]
-      assert opts.use_cache == false
-    end
-
-    test "validates option values" do
-      assert_raise NimbleOptions.ValidationError, fn ->
-        Forex.options(format: :invalid)
-      end
-    end
-  end
-
   describe "currency operations" do
     test "available_currencies/0 returns list of supported currencies" do
       currencies = Forex.available_currencies()

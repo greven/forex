@@ -64,10 +64,15 @@ defmodule Forex.CurrencyTest do
 
     test "returns a map of all currencies with the iso code as the key" do
       currencies = Currency.all()
-      currency_keys = Map.get(currencies, :eur) |> Map.keys() |> Enum.to_list() |> Enum.sort()
+
+      currency_keys =
+        Map.get(currencies, :eur)
+        |> Map.from_struct()
+        |> Map.keys()
+        |> Enum.sort()
 
       assert is_map(Map.get(currencies, :eur))
-      assert currency_keys == Enum.to_list(@currency_keys ++ [:enabled]) |> Enum.sort()
+      assert currency_keys == Enum.to_list(@currency_keys) |> Enum.sort()
     end
   end
 
@@ -80,7 +85,12 @@ defmodule Forex.CurrencyTest do
 
     test "returns a map of all the available currencies with the iso code as the key" do
       currencies = Currency.available()
-      currency_keys = Map.get(currencies, :eur) |> Map.keys() |> Enum.to_list() |> Enum.sort()
+
+      currency_keys =
+        Map.get(currencies, :eur)
+        |> Map.from_struct()
+        |> Map.keys()
+        |> Enum.sort()
 
       assert is_map(Map.get(currencies, :eur))
       assert currency_keys == Enum.to_list(@currency_keys) |> Enum.sort()
@@ -89,7 +99,9 @@ defmodule Forex.CurrencyTest do
 
   describe "disabled/0" do
     test "returns all the disabled currencies" do
-      keys = Currency.disabled() |> Map.keys()
+      keys =
+        Currency.disabled()
+        |> Map.keys()
 
       assert Enum.sort(keys) == Enum.sort(@disabled_currencies ++ @historic_currencies)
     end
@@ -332,8 +344,7 @@ defmodule Forex.CurrencyTest do
     end
 
     test "returns an error for invalid base currency", %{rates: rates} do
-      assert {Forex.CurrencyError, "Base currency not found in the available currency rates"} =
-               Currency.maybe_rebase(rates, "INVALID")
+      assert {:error, :base_currency_not_found} = Currency.maybe_rebase(rates, "INVALID")
     end
 
     test "handles case when base currency is not in rates list", %{rates: rates} do

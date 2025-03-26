@@ -7,12 +7,14 @@ defmodule Forex.Feed.Parser.ParserSweetXml do
 
   @behaviour Forex.Feed.Parser
 
+  @path ~x"//gesmes:Envelope/Cube/Cube"l
+
   @doc false
   @impl true
-  def parse_rates(body) do
-    body
-    |> SweetXml.parse()
-    |> SweetXml.xpath(~x"//gesmes:Envelope/Cube/Cube"l,
+  def parse_rates(response_body) do
+    response_body
+    |> SweetXml.parse(dtd: :none)
+    |> SweetXml.xpath(@path,
       time: ~x"./@time"s,
       rates: [
         ~x"./Cube"l,

@@ -32,7 +32,6 @@ defmodule Forex.Supervisor do
   def options(opts \\ []) do
     opts
     |> NimbleOptions.validate!(options_schema())
-    |> Enum.into(%{})
   end
 
   ## Client Interface
@@ -42,7 +41,7 @@ defmodule Forex.Supervisor do
     options = options(opts)
     supervisor = start_link()
 
-    if options.auto_start, do: start_fetcher!()
+    if options[:auto_start], do: start_fetcher!()
 
     supervisor
   end

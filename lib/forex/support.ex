@@ -4,6 +4,9 @@ defmodule Forex.Support do
   formatting the exchange rates values.
   """
 
+  @type parsable_date() ::
+          String.t() | Date.t() | DateTime.t() | {integer(), integer(), integer()}
+
   @doc """
   Convert the currency code to a default string representation (uppercase string).
 
@@ -38,11 +41,12 @@ defmodule Forex.Support do
       ** (FunctionClauseError) no function clause matching in Forex.Support.stringify_code/1
 
   """
+  @spec stringify_code(atom() | String.t()) :: String.t()
   def stringify_code(code) when is_atom(code), do: Atom.to_string(code) |> String.upcase()
   def stringify_code(code) when is_binary(code), do: String.upcase(code)
 
   @doc """
-  Conver the binary currency code to an atom representation.
+  Conver the binary currency code to an existing atom representation.
 
   ## Examples
 
@@ -65,6 +69,7 @@ defmodule Forex.Support do
         ** (FunctionClauseError) no function clause matching in Forex.Support.atomize_code/1
 
   """
+  @spec atomize_code(atom() | String.t()) :: atom()
   def atomize_code(code) when is_binary(code) do
     String.downcase(code) |> String.to_existing_atom()
   end
@@ -107,12 +112,14 @@ defmodule Forex.Support do
       iex> Forex.Support.format_value(1.2345, :number)
       ** (Forex.FormatError) Invalid format value: number
   """
-  def format_value(value, :string) when is_binary(value), do: value
-  def format_value(value, :decimal) when is_binary(value), do: Decimal.new(value)
-  def format_value(value, :string) when is_number(value), do: to_string(value)
-  def format_value(value, :decimal) when is_number(value), do: to_string(value) |> Decimal.new()
-  def format_value(%Decimal{} = value, :string), do: Decimal.to_string(value)
+  @spec format_value(number() | binary() | Decimal.t(), :string | :decimal) ::
+          formatted_value :: binary() | Decimal.t()
   def format_value(%Decimal{} = value, :decimal), do: value
+  def format_value(%Decimal{} = value, :string), do: Decimal.to_string(value)
+  def format_value(value, :string) when is_binary(value), do: value
+  def format_value(value, :string) when is_number(value), do: to_string(value)
+  def format_value(value, :decimal) when is_binary(value), do: Decimal.new(value)
+  def format_value(value, :decimal) when is_number(value), do: Decimal.new(to_string(value))
   def format_value(_, format), do: raise(Forex.FormatError, "Invalid format value: #{format}")
 
   @doc """
@@ -157,6 +164,7 @@ defmodule Forex.Support do
         ** (FunctionClauseError) no function clause matching in Forex.Support.round_value/2
   """
 
+  @spec round_value(any(), integer() | nil) :: any()
   def round_value(nil, _), do: nil
 
   def round_value(value, nil), do: value
@@ -203,8 +211,9 @@ defmodule Forex.Support do
       {:error, :invalid_date}
 
       iex> Forex.Support.parse_date(1982)
-      nil
+      {:error, :invalid_date}
   """
+  @spec parse_date(parsable_date()) :: {:ok, Date.t()} | {:error, :invalid_date}
   def parse_date(string) when is_binary(string) do
     case Date.from_iso8601(string) do
       {:ok, date} ->
@@ -218,17 +227,13 @@ defmodule Forex.Support do
     end
   end
 
-  def parse_date({year, month, day}) do
-    Date.new(year, month, day)
-  end
-
   def parse_date(%DateTime{} = datetime) do
     {:ok, DateTime.to_date(datetime)}
   end
 
   def parse_date(%Date{} = date), do: {:ok, date}
-
-  def parse_date(_), do: nil
+  def parse_date({year, month, day}), do: Date.new(year, month, day)
+  def parse_date(_), do: {:error, :invalid_date}
 
   @doc """
   Map the date to a `Date` struct
@@ -260,6 +265,7 @@ defmodule Forex.Support do
       iex> Forex.Support.map_date(1982)
       nil
   """
+  @spec map_date(parsable_date()) :: Date.t() | nil
   def map_date(date) do
     case parse_date(date) do
       {:ok, date} -> date

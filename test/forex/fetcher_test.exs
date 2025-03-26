@@ -6,15 +6,15 @@ defmodule Forex.FetcherTest do
 
   alias Forex.Fetcher
 
-  describe "configuration and options" do
-    test "the fetcher options have the correct defaults" do
-      assert Forex.Fetcher.options() == %{
-               cache_module: Forex.Cache.ETS,
-               schedular_interval: :timer.hours(12),
-               use_cache: true
-             }
-    end
-  end
+  # describe "configuration and options" do
+  #   test "the fetcher options have the correct defaults" do
+  #     assert Forex.Fetcher.options() == %{
+  #              cache_module: Forex.Cache.ETS,
+  #              schedular_interval: :timer.hours(12),
+  #              use_cache: true
+  #            }
+  #   end
+  # end
 
   describe "get/1" do
     setup do

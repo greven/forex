@@ -19,6 +19,18 @@ defmodule Forex.MixProject do
         ignore_modules: test_coverage_ignored()
       ],
 
+      # Dialyzer
+      dialyzer: [
+        plt_add_apps: ~w(mix)a,
+        flags: [
+          :error_handling,
+          :unknown,
+          :underspecs,
+          :extra_return,
+          :missing_return
+        ]
+      ],
+
       # Hex
       package: package(),
       description: description(),
@@ -82,6 +94,7 @@ defmodule Forex.MixProject do
       {:sweet_xml, "~> 0.7"},
       {:nimble_options, "~> 1.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.36", only: [:dev, :docs], runtime: false},
       {:git_ops, "~> 2.6", only: [:dev], runtime: false}
     ]

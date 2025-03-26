@@ -7,7 +7,50 @@ defmodule Forex.Currency do
   exchange rates feed.
   """
 
+  require Decimal
+
+  alias Forex.Options
   alias Forex.Support
+
+  @enforce_keys ~w(name iso_code iso_numeric symbol subunit subunit_name)a
+  defstruct name: nil,
+            iso_code: nil,
+            iso_numeric: nil,
+            symbol: nil,
+            subunit: nil,
+            subunit_name: nil,
+            alt_names: [],
+            alt_symbols: []
+
+  @type t :: %__MODULE__{
+          name: String.t(),
+          iso_code: String.t(),
+          iso_numeric: String.t(),
+          symbol: String.t(),
+          subunit: float(),
+          subunit_name: String.t(),
+          alt_names: [String.t()],
+          alt_symbols: [String.t()]
+        }
+
+  @typedoc """
+  The currency code is a three-letter code that represents a currency, in
+  accordance with the ISO 4217 standard. It can be either a string or an atom.
+  The code is case-insensitive, so `:usd` and `:USD` are equivalent.
+  """
+  @type code :: atom() | String.t()
+
+  @typedoc """
+  The currency input amount can be a number, a Decimal value,
+  or a string representation of a number.
+  """
+  @type input_amount :: number() | Decimal.t() | String.t()
+
+  @typedoc """
+  A currency output amount can be a Decimal value
+  or a string representation of a number.
+  """
+  @type output_amount :: Decimal.t() | String.t()
 
   @currencies %{
     aud: %{
@@ -474,11 +517,16 @@ defmodule Forex.Currency do
     }
   }
 
-  ## Guards
-
   @doc false
   defguard is_currency_code(currency_code)
            when (is_atom(currency_code) or is_binary(currency_code)) and not is_nil(currency_code)
+
+  @doc false
+  defguard is_currency_amount(amount)
+           when is_number(amount) or Decimal.is_decimal(amount) or is_binary(amount)
+
+  # Create a new currency struct and drop the `:enabled` field
+  defp new(currency), do: struct(__MODULE__, Map.drop(currency, [:enabled]))
 
   ## Public API
 
@@ -486,36 +534,39 @@ defmodule Forex.Currency do
   Get all list of all currencies, including disabled currencies (necessary,
   since historical rates may include disabled currencies in the past).
   """
+  @spec all(keys :: :atoms | :strings) :: %{code() => t()}
   def all(keys \\ :atoms)
 
   def all(:atoms) do
-    Map.new(@currencies)
+    @currencies
+    |> Enum.map(fn {code, currency} -> {code, new(currency)} end)
+    |> Map.new()
   end
 
   def all(:strings) do
     @currencies
-    |> Map.new(fn {code, currency} ->
-      {Support.stringify_code(code), currency}
-    end)
+    |> Enum.map(fn {code, currency} -> {Support.stringify_code(code), new(currency)} end)
+    |> Map.new()
   end
 
   @doc """
   Get all list of all the available currencies (enabled currencies), that
   is, all the currencies that are supported by the ECB at the present time.
   """
+  @spec available(keys :: :atoms | :strings) :: %{code() => t()}
   def available(keys \\ :atoms)
 
   def available(:atoms) do
-    all(:atoms)
+    @currencies
     |> Enum.filter(fn {_code, currency} -> currency.enabled end)
-    |> Enum.map(fn {code, currency} -> {code, Map.drop(currency, [:enabled])} end)
+    |> Enum.map(fn {code, currency} -> {code, new(currency)} end)
     |> Map.new()
   end
 
   def available(:strings) do
-    all(:strings)
+    @currencies
     |> Enum.filter(fn {_code, currency} -> currency.enabled end)
-    |> Enum.map(fn {code, currency} -> {code, Map.drop(currency, [:enabled])} end)
+    |> Enum.map(fn {code, currency} -> {Support.stringify_code(code), new(currency)} end)
     |> Map.new()
   end
 
@@ -524,26 +575,27 @@ defmodule Forex.Currency do
   all the currencies that are not supported by the ECB at the present time but
   may have been supported in the past and are included in historical rates.
   """
+  @spec disabled(keys :: :atoms | :strings) :: %{code() => t()}
   def disabled(keys \\ :atoms)
 
   def disabled(:atoms) do
-    all(:atoms)
+    @currencies
     |> Enum.filter(fn {_code, currency} -> not currency.enabled end)
-    |> Enum.map(fn {code, currency} -> {code, Map.drop(currency, [:enabled])} end)
+    |> Enum.map(fn {code, currency} -> {code, new(currency)} end)
     |> Map.new()
   end
 
   def disabled(:strings) do
-    all(:strings)
+    @currencies
     |> Enum.filter(fn {_code, currency} -> not currency.enabled end)
-    |> Enum.map(fn {code, currency} -> {code, Map.drop(currency, [:enabled])} end)
+    |> Enum.map(fn {code, currency} -> {Support.stringify_code(code), new(currency)} end)
     |> Map.new()
   end
 
   @doc """
   Get the currency information for the given ISO code.
 
-  Example:
+  Examples:
 
       iex> Forex.Currency.get(:eur)
       {:ok, %{name: "Euro", ...}}
@@ -552,6 +604,7 @@ defmodule Forex.Currency do
       iex> Forex.Currency.get(:GBP)
       {:ok, %{name: "British Pound Sterling", ...}}
   """
+  @spec get(code()) :: {:ok, t()} | {:error, :not_found}
   def get(iso_code) when is_binary(iso_code) do
     iso_code
     |> Support.atomize_code()
@@ -572,6 +625,7 @@ defmodule Forex.Currency do
   Get the currency information for the given ISO code.
   The same as `get/1`, but raises a `Forex.CurrencyError` if the currency is not found.
   """
+  @spec get!(code()) :: t()
   def get!(iso_code) do
     case get(iso_code) do
       {:ok, currency} -> currency
@@ -583,7 +637,7 @@ defmodule Forex.Currency do
   Check if a currency with the given ISO exists, i.e.,
   if it is supported by the European Central Bank (ECB) service.
 
-  Example:
+  Examples:
 
       iex> Forex.Currency.exists?(:eur)
       true
@@ -598,6 +652,7 @@ defmodule Forex.Currency do
       iex> Forex.Currency.exists?(nil)
       false
   """
+  @spec exists?(code()) :: boolean()
   def exists?(iso_code) when is_binary(iso_code) do
     iso_code
     |> Support.atomize_code()
@@ -617,8 +672,7 @@ defmodule Forex.Currency do
   Exchange a given amount from one currency to another using ECB rates.
 
   ## Options
-    * `:format` - Output format (`:decimal` or `:string`). Defaults to `:decimal`.
-    * `:round` - Decimal places for rounding. Defaults to `5`.
+  #{NimbleOptions.docs(Forex.Options.currency_schema())}
 
   ## Examples
 
@@ -631,55 +685,67 @@ defmodule Forex.Currency do
       iex> Forex.exchange(100, "INVALID", "EUR")
       {:error, :invalid_currency}
   """
-  def exchange(amount, from, to, opts \\ [])
-      when is_currency_code(from) and is_currency_code(to) do
-    with from <- Support.stringify_code(from),
-         to <- Support.stringify_code(to),
+  @spec exchange(
+          amount :: input_amount(),
+          from_currency :: code(),
+          to_currency :: code(),
+          opts :: [Options.currency_option()]
+        ) :: {:ok, output_amount()} | {:error, term()}
+  def exchange(amount, from_currency, to_currency, opts \\ [])
+
+  def exchange(amount, from_currency, to_currency, opts)
+      when is_currency_amount(amount) and is_currency_code(from_currency) and
+             is_currency_code(to_currency) do
+    with from <- Support.stringify_code(from_currency),
+         to <- Support.stringify_code(to_currency),
          {:ok, _} <- validate_currencies(from, to),
-         {:ok, %{rates: rates}} <- Forex.latest_rates(base: from, keys: :strings),
-         {:ok, result} <- do_exchange(amount, Map.get(rates, from), Map.get(rates, to)) do
-      format = Keyword.get(opts, :format, :decimal)
-      round = Keyword.get(opts, :round, 5)
+         {:ok, %{rates: rates}} <- Forex.latest_rates(base: from, keys: :strings) do
+      opts = Options.currency_options(opts)
 
-      result =
-        result
-        |> Support.round_value(round)
-        |> Support.format_value(format)
+      from_rates = Map.get(rates, from)
+      to_rates = Map.get(rates, to)
 
-      {:ok, result}
+      new_amount =
+        amount
+        |> Support.format_value(:decimal)
+        |> Decimal.mult(Decimal.div(to_rates, from_rates))
+        |> Support.round_value(opts[:round])
+        |> Support.format_value(opts[:format])
+
+      {:ok, new_amount}
     else
-      {:error, _} = error -> error
-      _ -> {:error, :exchange_error}
+      {:error, reason} -> {:error, reason}
     end
   end
+
+  def exchange(_, _, _, _), do: {:error, :invalid_exchange}
 
   @doc """
   Exchange a given amount from one currency to another using ECB rates.
   Like `exchange/4`, but raises a `Forex.CurrencyError` if the exchange fails.
   """
-  def exchange!(amount, from, to, opts \\ []) do
-    case exchange(amount, from, to, opts) do
+
+  @spec exchange!(
+          amount :: input_amount(),
+          from_currency :: code(),
+          to_currency :: code(),
+          opts :: [Options.currency_option()]
+        ) :: output_amount()
+  def exchange!(amount, from_currency, to_currency, opts \\ []) do
+    case exchange(amount, from_currency, to_currency, opts) do
       {:ok, result} -> result
-      {:error, _} -> raise Forex.CurrencyError, "Currency exchange failed"
+      {:error, reason} -> raise Forex.CurrencyError, "Currency exchange failed: #{reason}"
     end
   end
 
+  @spec validate_currencies(from :: code(), to :: code()) ::
+          {:ok, {code(), code()}} | {:error, :invalid_currency}
   defp validate_currencies(from, to) do
     case {exists?(from), exists?(to)} do
       {true, true} -> {:ok, {from, to}}
       _ -> {:error, :invalid_currency}
     end
   end
-
-  defp do_exchange(amount, from_rate, to_rate)
-       when not is_nil(from_rate) and not is_nil(to_rate) do
-    {:ok,
-     amount
-     |> Support.format_value(:decimal)
-     |> Decimal.mult(Decimal.div(to_rate, from_rate))}
-  end
-
-  defp do_exchange(_, _, _), do: {:error, :invalid_exchange}
 
   ## Helpers
 
@@ -689,6 +755,12 @@ defmodule Forex.Currency do
   The default base currency is `:EUR`, so if the base_currency is a different
   currency, the rates will be converted to the new currency base.
   """
+
+  @spec maybe_rebase(
+          eur_rates :: [%{currency: code(), rate: String.t()}],
+          base_currency :: code()
+        ) ::
+          {:ok, [%{currency: code(), rate: Decimal.t()}]} | {:error, :base_currency_not_found}
   def maybe_rebase(eur_rates, base_currency) when is_atom(base_currency) do
     base_currency
     |> Atom.to_string()
@@ -702,14 +774,18 @@ defmodule Forex.Currency do
     if exists?(new_base) do
       {:ok, rebase(eur_rates, new_base)}
     else
-      {Forex.CurrencyError, "Base currency not found in the available currency rates"}
+      {:error, :base_currency_not_found}
     end
   end
 
   @doc """
-  Given a list of rates in the form of %{currency_code() => Decimal.t()},
+  Given a list of rates in the form of %{code() => Decimal.t()},
   convert the rates to a new currency base.
   """
+  @spec rebase(
+          rates :: [%{currency: code(), rate: String.t()}],
+          base :: code()
+        ) :: [%{currency: code(), rate: Decimal.t()}]
   def rebase(rates, base) do
     # Find the rate for the new base currency
     base_rate = Enum.find(rates, &(&1.currency == base))

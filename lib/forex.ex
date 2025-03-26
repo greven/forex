@@ -6,63 +6,35 @@ defmodule Forex do
              |> Enum.fetch!(1)
              |> String.replace("### Usage Information", "### Usage Information {: .info}")
 
-  @typedoc """
-  The currency code is a three-letter code that represents a currency,
-  in accordance with the ISO 4217 standard.
-  It can be either a string or an atom.
-  """
-  @type currency_code :: String.t() | atom()
+  import Forex.Support
+  import Forex.Options, only: [rates_options: 1]
+
+  alias Forex.Options
+  alias Forex.Currency
+  alias Forex.Fetcher
+
+  defstruct [:base, :date, :rates]
 
   @typedoc """
-  A currency rate, represented as a map with the currency code as the key
-  and the rate as the value. The rate can be either a Decimal or a string.
+  A currency rate, represented as a map with the currency code as
+  the key and the rate amount as the value.
   """
-  @type rate :: %{currency_code() => Decimal.t() | String.t()}
+  @type rate :: %{Currency.code() => Currency.output_amount()}
+
+  @typedoc """
+  A Forex struct, representing the exchange rates for a given date.
+  """
+  @type t :: %__MODULE__{
+          base: Currency.code(),
+          date: Date.t(),
+          rates: rate()
+        }
 
   # A date that can be either a string in the ISO 8601 format, a Date struct
   # or a tuple with the date components in the format `{year, month, day}`.
   @typep maybe_date :: String.t() | tuple() | Date.t()
 
-  import Forex.Support
-
-  alias Forex.Currency
-  alias Forex.Fetcher
-
-  ## Options
-
-  defp options_schema do
-    NimbleOptions.new!(
-      base: [type: {:in, currency_schema_options()}, default: :eur],
-      format: [type: {:in, ~w(decimal string)a}, default: :decimal],
-      round: [type: {:or, [:integer, nil]}, default: 5],
-      symbols: [
-        type: {:or, [{:list, {:in, currency_schema_options()}}, nil]},
-        default: nil
-      ],
-      keys: [type: {:in, ~w(strings atoms)a}, default: :atoms],
-      use_cache: [type: :boolean, default: true],
-      feed_fn: [type: :mfa, default: nil]
-    )
-  end
-
-  @doc """
-  Validate and return the options for the Forex module functions,
-  using default values if the options are not provided.
-
-  ## Options
-
-  * `:base` - The base currency to convert rates to (default: `:eur`)
-  * `:format` - Format of rate values (`:decimal` or `:string`, default: `:decimal`)
-  * `:round` - Decimal places for rounding (default: `5`)
-  * `:symbols` - Currency codes to include (default: `nil` for all currencies)
-  * `:keys` - Map key format (`:atoms` or `:strings`, default: `:atoms`)
-  * `:use_cache` - Whether to use cached rates (default: `true`)
-  * `:feed_fn` - Optional custom feed function as `{module, function, args}` (default: `nil`)
-  """
-  def options(opts \\ []) do
-    NimbleOptions.validate!(opts, options_schema())
-    |> Enum.into(%{})
-  end
+  @base_currency_rate %{currency: "EUR", rate: "1.00000"}
 
   @doc """
   Returns the configured JSON encoding library for Forex.
@@ -86,28 +58,12 @@ defmodule Forex do
     Application.get_env(:forex, :json_library, JSON)
   end
 
-  # The allowed currency codes for the schema options
-  defp currency_schema_options do
-    string_keys_upper = available_currencies(:strings)
-    string_keys_lower = Enum.map(string_keys_upper, &String.downcase/1)
-
-    atom_keys_lower = available_currencies(:atoms)
-
-    atom_keys_upper =
-      Enum.map(atom_keys_lower, fn k ->
-        Atom.to_string(k)
-        |> String.upcase()
-        |> String.to_atom()
-      end)
-
-    string_keys_lower ++ string_keys_upper ++ atom_keys_lower ++ atom_keys_upper
-  end
-
   ## Currencies
 
   @doc """
   Return a list of all available currencies ISO 4217 codes.
   """
+  @spec available_currencies(keys :: :atoms | :strings) :: [Currency.code()]
   def available_currencies(keys \\ :atoms)
 
   def available_currencies(:strings) do
@@ -123,6 +79,7 @@ defmodule Forex do
   @doc """
   Return a list of all available currencies.
   """
+  @spec list_currencies(keys :: :atoms | :strings) :: %{Currency.code() => Currency.t()}
   def list_currencies(keys \\ :atoms)
   def list_currencies(:atoms), do: Currency.available(:atoms)
   def list_currencies(:strings), do: Currency.available(:strings)
@@ -132,6 +89,7 @@ defmodule Forex do
   `%{currency_code() => currency_name()}`.
   Useful for input forms, selects, etc.
   """
+  @spec currency_options(keys :: :atoms | :strings) :: [{String.t(), Currency.code()}]
   def currency_options(keys \\ :atoms)
 
   def currency_options(:atoms) do
@@ -153,6 +111,7 @@ defmodule Forex do
   @doc """
   Get the currency information for the given ISO code.
   """
+  @spec get_currency(Currency.code()) :: {:ok, Currency.t()} | {:error, term}
   def get_currency(currency_code),
     do: Currency.get(currency_code)
 
@@ -160,6 +119,7 @@ defmodule Forex do
   Get the currency information for the given ISO code.
   Like `get_currency/1`, but raises an error if the currency is not found.
   """
+  @spec get_currency!(Currency.code()) :: Currency.t()
   def get_currency!(currency_code),
     do: Currency.get!(currency_code)
 
@@ -186,14 +146,25 @@ defmodule Forex do
   {:ok, "159.3"}
   ```
   """
-  @spec exchange(number() | Decimal.t(), currency_code(), currency_code(), keyword()) ::
-          {:ok, Decimal.t()} | {:error, term}
+  @spec exchange(
+          amount :: Currency.input_amount(),
+          from :: Currency.code(),
+          to :: Currency.code(),
+          opts :: [Options.currency_option()]
+        ) ::
+          {:ok, Currency.output_amount()} | {:error, term}
   def exchange(amount, from, to, opts \\ []),
     do: Currency.exchange(amount, from, to, opts)
 
   @doc """
   Same as `exchange/3`, but raises an error if the request fails.
   """
+  @spec exchange!(
+          amount :: Currency.input_amount(),
+          from :: Currency.code(),
+          to :: Currency.code(),
+          opts :: [Options.currency_option()]
+        ) :: Currency.output_amount()
   def exchange!(amount, from, to, opts \\ []),
     do: Currency.exchange!(amount, from, to, opts)
 
@@ -202,21 +173,8 @@ defmodule Forex do
   @doc """
   Fetch the latest exchange rates from the European Central Bank (ECB).
 
-  ## Return Value
-
-  Returns `{:ok, %{base: atom(), date: Date.t(), rates: map()}}` on success where:
-  - `base` is the base currency code
-  - `date` is the reference date
-  - `rates` is a map of currency codes to rate values
-
-  ## Arguments
-
-  * `opts` - Options:
-    * `:format` - Format of rates (`:decimal` or `:string`, default: `:decimal`)
-    * `:base` - Base currency (default: `EUR`)
-    * `:symbols` - List of currency codes to include
-    * `:keys` - Key format in rates map (`:atoms` or `:strings`)
-    * `:use_cache` - Whether to use cached rates (default: `true`)
+  ## Options
+  #{NimbleOptions.docs(Forex.Options.rates_schema())}
 
   ## Examples
 
@@ -224,18 +182,19 @@ defmodule Forex do
   {:ok, %{base: :eur, date: ~D[2025-03-12], rates: %{usd: Decimal.new("1.1234"), jpy: Decimal.new("120.1234"), ...}}}
   ```
   """
-  @spec latest_rates(keyword) :: {:ok, rate()} | {:error, term}
+  @spec latest_rates(opts :: [Options.rates_option()]) :: {:ok, t()} | {:error, term}
   def latest_rates(opts \\ []) when is_list(opts) do
-    opts = options(opts)
+    opts = rates_options(opts)
+    base = Keyword.get(opts, :base)
 
-    case Fetcher.get(:latest_rates, use_cache: opts.use_cache, feed_fn: opts.feed_fn) do
+    case Fetcher.get(:latest_rates, use_cache: opts[:use_cache], feed_fn: opts[:feed_fn]) do
       {:ok, entries} ->
         result =
           Enum.map(entries, fn %{time: datetime, rates: rates} ->
             %{
+              base: base,
               date: map_date(datetime),
-              base: Map.get(opts, :base),
-              rates: map_rates(rates, options(opts))
+              rates: map_rates(rates, opts)
             }
           end)
           |> List.first()
@@ -250,7 +209,7 @@ defmodule Forex do
   @doc """
   Same as `latest_rates/1`, but raises an error if the request fails.
   """
-  @spec latest_rates!(keyword) :: rate()
+  @spec latest_rates!(opts :: [Options.rates_option()]) :: t()
   def latest_rates!(opts \\ []) when is_list(opts) do
     case latest_rates(opts) do
       {:ok, rates} -> rates
@@ -264,23 +223,27 @@ defmodule Forex do
 
   Note that rates are only available on working days.
 
-  ## Arguments
-
-  Same options as `latest_rates/1`.
+  ## Options
+  #{NimbleOptions.docs(Forex.Options.rates_schema())}
   """
-  @spec last_ninety_days_rates(keyword) :: {:ok, [rate()]} | {:error, term}
+  @spec last_ninety_days_rates(opts :: [Options.rates_option()]) ::
+          {:ok, [t()]} | {:error, term}
   def last_ninety_days_rates(opts \\ []) when is_list(opts) do
-    opts = options(opts)
+    opts = rates_options(opts)
+    base = Keyword.get(opts, :base)
 
-    case Fetcher.get(:last_ninety_days_rates, use_cache: opts.use_cache, feed_fn: opts.feed_fn) do
+    case Fetcher.get(:last_ninety_days_rates,
+           use_cache: opts[:use_cache],
+           feed_fn: opts[:feed_fn]
+         ) do
       {:ok, entries} ->
         results =
           entries
           |> Stream.map(fn %{time: datetime, rates: rates} ->
             %{
+              base: base,
               date: map_date(datetime),
-              base: Map.get(opts, :base),
-              rates: map_rates(rates, options(opts))
+              rates: map_rates(rates, opts)
             }
           end)
           |> Enum.filter(fn %{date: date} -> date != nil end)
@@ -295,7 +258,7 @@ defmodule Forex do
   @doc """
   Same as `last_ninety_days_rates/1`, but raises an error if the request fails.
   """
-  @spec last_ninety_days_rates!(keyword) :: [rate()]
+  @spec last_ninety_days_rates!(opts :: [Options.rates_option()]) :: [t()]
   def last_ninety_days_rates!(opts \\ []) when is_list(opts) do
     case last_ninety_days_rates(opts) do
       {:ok, entries} -> entries
@@ -312,20 +275,22 @@ defmodule Forex do
   usage when caching the results if not needed. To fetch and cache the historic rates,
   you need to manually call this function.
 
-  Same options as `latest_rates/1`.
+   ## Options
+   #{NimbleOptions.docs(Forex.Options.rates_schema())}
   """
-  @spec historic_rates(keyword) :: {:ok, [rate()]} | {:error, term}
+  @spec historic_rates(opts :: [Options.rates_option()]) :: {:ok, [t()]} | {:error, term}
   def historic_rates(opts \\ []) when is_list(opts) do
-    opts = options(opts)
+    opts = rates_options(opts)
+    base = Keyword.get(opts, :base)
 
-    case Fetcher.get(:historic_rates, use_cache: opts.use_cache, feed_fn: opts.feed_fn) do
+    case Fetcher.get(:historic_rates, use_cache: opts[:use_cache], feed_fn: opts[:feed_fn]) do
       {:ok, entries} ->
         results =
           entries
           |> Stream.map(fn %{time: datetime, rates: rates} ->
             %{
+              base: base,
               date: map_date(datetime),
-              base: Map.get(opts, :base),
               rates: map_rates(rates, opts)
             }
           end)
@@ -341,7 +306,7 @@ defmodule Forex do
   @doc """
   Same as `historic_rates/1`, but raises an error if the request fails.
   """
-  @spec historic_rates!(keyword) :: [rate()]
+  @spec historic_rates!(opts :: [Options.rates_option()]) :: [t()]
   def historic_rates!(opts \\ []) when is_list(opts) do
     case historic_rates(opts) do
       {:ok, entries} -> entries
@@ -354,15 +319,11 @@ defmodule Forex do
   It returns either an `{:ok, rate()}` if the rate was successfully
   retrieved or an `{:error, reasons}` if the rate was not found.
 
-  ## Arguments
-
-  * `date` - The date to get the rate for. `date` is either a `Date.new()` struct
-    or a string in the ISO 8601 format.
-  * `opts` - Same options as `latest_rates/1`.
-
+  ## Options
+  #{NimbleOptions.docs(Forex.Options.rates_schema())}
   """
-  @spec get_historic_rate(maybe_date(), keyword) ::
-          {:ok, [rate()]} | {:error, term}
+  @spec get_historic_rate(maybe_date(), opts :: [Options.rates_option()]) ::
+          {:ok, rate()} | {:error, term}
   def get_historic_rate(date, opts \\ [])
 
   def get_historic_rate(date, opts) when is_binary(date) or is_tuple(date) do
@@ -385,7 +346,7 @@ defmodule Forex do
     end
   end
 
-  @spec find_historic_rate_date([rate()], Date.t()) :: rate() | nil
+  @spec find_historic_rate_date(entries :: [t()], date :: Date.t()) :: t() | nil
   defp find_historic_rate_date(entries, date) when is_list(entries) do
     Enum.find(entries, fn
       %{date: %Date{} = d} -> Date.compare(date, d) == :eq
@@ -396,7 +357,7 @@ defmodule Forex do
   @doc """
   Same as `get_historic_rate/2`, but raises an error if the request fails.
   """
-  @spec get_historic_rate!(maybe_date(), keyword) :: [rate()]
+  @spec get_historic_rate!(maybe_date(), opts :: [Options.rates_option()]) :: rate()
   def get_historic_rate!(date, opts \\ [])
 
   def get_historic_rate!(date, opts) when is_binary(date) or is_tuple(date) do
@@ -418,16 +379,8 @@ defmodule Forex do
 
   Returns a list of exchange rates for each working day between the start and end date.
 
-  ## Arguments
-
-  * `start_date` - Start date (Date, ISO 8601 string, or {year, month, day} tuple)
-  * `end_date` - End date (Date, ISO 8601 string, or {year, month, day} tuple)
-  * `opts` - Same options as `latest_rates/1`
-
-  ## Return Value
-
-  Returns `{:ok, [%{date: Date.t(), base: atom(), rates: map()}]}` where each list item
-  represents rates for one day.
+  ## Options
+  #{NimbleOptions.docs(Forex.Options.rates_schema())}
 
   ## Examples
 
@@ -441,8 +394,8 @@ defmodule Forex do
   ]}
   ```
   """
-  @spec get_historic_rates_between(maybe_date(), maybe_date(), keyword) ::
-          {:ok, [rate()]} | {:error, term}
+  @spec get_historic_rates_between(maybe_date(), maybe_date(), opts :: [Options.rates_option()]) ::
+          {:ok, [t()]} | {:error, term}
   def get_historic_rates_between(start_date, end_date, opts \\ [])
 
   def get_historic_rates_between(start_date, end_date, opts)
@@ -450,8 +403,6 @@ defmodule Forex do
     with {:ok, start_date} <- parse_date(start_date),
          {:ok, end_date} <- parse_date(end_date) do
       get_historic_rates_between(start_date, end_date, opts)
-    else
-      {:error, _} -> {:error}
     end
   end
 
@@ -473,16 +424,14 @@ defmodule Forex do
           end)
 
         {:ok, entries_range}
-
-      {:error, reason} ->
-        {:error, reason}
     end
   end
 
   @doc """
   Same as `get_historic_rates_between/3`, but raises an error if the request fails.
   """
-  @spec get_historic_rates_between!(maybe_date(), maybe_date(), keyword) :: [rate()]
+  @spec get_historic_rates_between!(maybe_date(), maybe_date(), opts :: [Options.rates_option()]) ::
+          [t()]
   def get_historic_rates_between!(start_date, end_date, opts \\ [])
 
   def get_historic_rates_between!(start_date, end_date, opts)
@@ -491,7 +440,7 @@ defmodule Forex do
          {:ok, end_date} <- parse_date(end_date) do
       get_historic_rates_between!(start_date, end_date, opts)
     else
-      {:error, _} -> {:error, {Forex.DateError, "Invalid date format"}}
+      {:error, _} -> raise Forex.DateError, "Invalid date format"
     end
   end
 
@@ -520,7 +469,13 @@ defmodule Forex do
         last_ninety_days_rates: ~U[2024-11-23 18:19:39.111818Z],
       ]
   """
-  @spec last_updated() :: Keyword.t() | nil
+  @spec last_updated() ::
+          [
+            latest_rates: DateTime.t(),
+            historic_rates: DateTime.t(),
+            last_ninety_days_rates: DateTime.t()
+          ]
+          | nil
   def last_updated do
     if Forex.Cache.initialized?() do
       Forex.Cache.last_updated()
@@ -531,23 +486,20 @@ defmodule Forex do
 
   ## Private Functions
 
-  # Default base currency rate
-  defp base_currency_rate, do: %{currency: "EUR", rate: "1.00000"}
-
   # Map the rates response to the format %{currency_code() => Decimal.t()}
   # If not EUR based currency we rebase the rates to the new base currency
   defp map_rates({:error, reason}, _), do: {:error, reason}
   defp map_rates({:ok, rates}, opts), do: map_rates(rates, opts)
 
   defp map_rates(rates, opts) when is_list(rates) do
-    [base_currency_rate() | rates]
-    |> maybe_filter_currencies(opts.symbols)
-    |> Currency.maybe_rebase(opts.base)
+    [@base_currency_rate | rates]
+    |> maybe_filter_currencies(opts[:symbols])
+    |> Currency.maybe_rebase(opts[:base])
     |> case do
       {:ok, rebased_rates} ->
         rebased_rates
         |> Stream.map(fn %{currency: currency, rate: value} ->
-          {maybe_atomize_code(currency, opts.keys), rate_value(value, opts)}
+          {maybe_atomize_code(currency, opts[:keys]), rate_value(value, opts)}
         end)
         |> Enum.into(%{})
 
@@ -561,8 +513,8 @@ defmodule Forex do
   # Format the rate value based on the options
   defp rate_value(value, opts) do
     value
-    |> format_value(opts.format)
-    |> round_value(opts.round)
+    |> format_value(opts[:format])
+    |> round_value(opts[:round])
   end
 
   # Filter the rates based on the symbols option
