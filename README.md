@@ -33,7 +33,9 @@ If you need a more advanced library that provides additional features and allows
 to fetch exchange rates from multiple sources, you should check out
 the excellent [money](https://github.com/kipcole9/money).
 
-## Supervision
+## Configuration
+
+### Supervision
 
 By default, `Forex` starts with your application which in turn starts the `Forex.Supervisor`. If you
 don't want to start the `Forex` supervision tree by default, you can pass the `runtime: false` option
@@ -51,6 +53,17 @@ The `Forex` supervision tree is responsible for fetching the exchange rates from
 and caching them for later use. If you want to start the `Forex.Fetcher` manually, you can do so by calling
 the `Forex.Fetcher.Supervisor.start_link/1` function in your application supervision tree.
 
+### HTTP Client
+
+By default, `Forex` uses the `Req` HTTP client in `Forex.Feed.API.HTTP` to fetch the exchange rates from
+the European Central Bank. To use a different HTTP client, define your own implementation of
+the `Forex.Feed.API` behaviour and pass it to the `Forex` module in your `config.exs` file:
+
+```elixir
+config :forex, feed_api: MyApp.Forex.API
+```
+
+
 ## Usage
 
 By default the `base` currency is the Euro (EUR), the same as the European Central Bank,
@@ -62,7 +75,7 @@ To fetch the latest exchange rates, you can use the `latest_rates/1` function:
 ```elixir
 iex> Forex.latest_rates()
 {:ok,
-  %{
+  %Forex{
     base: :eur,
     date: ~D[2025-03-12],
     rates: %{
@@ -80,7 +93,7 @@ To fetch the exchange rates for the last ninety days, you can use the `last_nine
 iex> Forex.last_ninety_days_rates()
 {:ok,
   [
-    %{date: ~D[2025-03-12], base: :eur, rates: %{usd: Decimal.new("1.1234"), ...}},
+    %Forex{date: ~D[2025-03-12], base: :eur, rates: %{usd: Decimal.new("1.1234"), ...}},
     ...
   ]}
 ```
@@ -92,7 +105,7 @@ you can use the `historic_rates/1` function:
 iex> Forex.historic_rates()
 {:ok,
   [
-    %{date: ~D[2025-03-12], base: :eur, rates: %{usd: Decimal.new("1.1234"), ...}},
+    %Forex{date: ~D[2025-03-12], base: :eur, rates: %{usd: Decimal.new("1.1234"), ...}},
     ...
   ]}
 ```
@@ -103,7 +116,7 @@ To fetch the exchange rates for a specific date, you can use the `get_historic_r
 iex> Forex.get_historic_rate(~D[2025-02-25])
 {:ok,
   [
-    %{date: ~D[2025-03-12], base: :eur, rates: %{usd: Decimal.new("1.1234"), ...}},
+    %Forex{date: ~D[2025-03-12], base: :eur, rates: %{usd: Decimal.new("1.1234"), ...}},
     ...
   ]}
 ```
@@ -115,7 +128,7 @@ iex> Forex.get_historic_rates_between(~D[2025-02-25], ~D[2025-02-28])
 
 {:ok,
   [
-    %{date: ~D[2025-03-12], base: :eur, rates: %{usd: Decimal.new("1.1234"), ...}},
+    %Forex{date: ~D[2025-03-12], base: :eur, rates: %{usd: Decimal.new("1.1234"), ...}},
     ...
   ]}
 ```
