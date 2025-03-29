@@ -1,4 +1,12 @@
-# Forex
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./priv/images/logo_dark.png" />
+    <source media="(prefers-color-scheme: light)" srcset="./priv/images/logo_light.png" />
+    <img src="./priv/images/logo_light.png" alt="Forex logo" />
+  </picture>
+</div>
+
+> Foreign exchange rates simplified.
 
 [![hex.pm badge](https://img.shields.io/hexpm/v/forex?style=for-the-badge&labelColor=000)](https://hex.pm/packages/forex)
 [![Documentation badge](https://img.shields.io/badge/Docs-3B82F6?style=for-the-badge&labelColor=000)][DOCS]
@@ -8,7 +16,8 @@
 <!-- MDOC !-->
 
 `Forex` is a simple Elixir library that serves as a wrapper to the
-foreign exchange reference rates provided by the European Central Bank.
+foreign exchange reference rates provided by the European Central Bank, no API keys,
+no authentication, no rate limits.
 
 > ### ECB Exchange Rates Important Notice
 >
