@@ -10,9 +10,10 @@ defmodule Forex do
   import Forex.Options, only: [rates_options: 1]
 
   alias __MODULE__
-  alias Forex.Options
+
   alias Forex.Currency
   alias Forex.Fetcher
+  alias Forex.Options
 
   defstruct [:base, :date, :rates]
 
@@ -31,9 +32,10 @@ defmodule Forex do
           rates: rate()
         }
 
-  # A date that can be either a string in the ISO 8601 format, a Date struct
+  # A date that can be either a Date struct, a string in the ISO 8601 format,
   # or a tuple with the date components in the format `{year, month, day}`.
-  @typep maybe_date :: String.t() | tuple() | Date.t()
+  @typep parsable_date() ::
+           Date.t() | DateTime.t() | String.t() | {integer(), integer(), integer()}
 
   @base_currency_rate %{currency: "EUR", rate: "1.00000"}
 
@@ -124,89 +126,6 @@ defmodule Forex do
   def get_currency!(currency_code),
     do: Currency.get!(currency_code)
 
-  @doc """
-  Exchange a given amount from one currency to another.
-  It will use the cached exchange rates from the European Central
-  Bank (ECB) or fetch the latest rates if the cache is disabled.
-
-  ## Options
-  #{NimbleOptions.docs(Forex.Options.currency_schema())}
-
-  ## Examples
-
-  ```elixir
-  iex> Forex.exchange(100, "USD", "EUR")
-  {:ok, Decimal.new("91.86100")}
-
-  iex> Forex.exchange(420, :eur, :gbp, format: :string)
-  {:ok, "353.12760"}
-
-  iex> Forex.exchange(123, :gbp, :usd, format: :string, round: 1)
-  {:ok, "159.3"}
-  ```
-  """
-  @spec exchange(
-          amount :: Currency.input_amount(),
-          from :: Currency.code(),
-          to :: Currency.code(),
-          opts :: [Options.currency_option()]
-        ) ::
-          {:ok, Currency.output_amount()} | {:error, term}
-  def exchange(amount, from, to, opts \\ []),
-    do: Currency.exchange(amount, from, to, opts)
-
-  @doc """
-  Same as `exchange/3`, but raises an error if the request fails.
-  """
-  @spec exchange!(
-          amount :: Currency.input_amount(),
-          from :: Currency.code(),
-          to :: Currency.code(),
-          opts :: [Options.currency_option()]
-        ) :: Currency.output_amount()
-  def exchange!(amount, from, to, opts \\ []),
-    do: Currency.exchange!(amount, from, to, opts)
-
-  @doc """
-  Given a specific date, amount, and two currencies, it will return the
-  exchange rate for that date.
-
-  ## Options
-  #{NimbleOptions.docs(Forex.Options.currency_schema())}
-
-  ## Examples
-
-  ```elixir
-  iex> Forex.exchange_historic_rate("2023-01-01", 100, "USD", "EUR")
-  {:ok, Decimal.new("91.86100")}
-  iex> Forex.exchange_historic_rate(~D[2023-01-01], 420, :eur, :gbp, format: :string)
-  {:ok, "353.12760"}
-  """
-  @spec exchange_historic_rate(
-          date :: maybe_date(),
-          amount :: Currency.input_amount(),
-          from :: Currency.code(),
-          to :: Currency.code(),
-          opts :: [Options.rates_option()]
-        ) :: {:ok, Currency.output_amount()} | {:error, term}
-  def exchange_historic_rate(date, amount, from, to, opts \\ []) do
-    case get_historic_rate(date, opts) do
-      {:ok, %Forex{rates: rates}} -> Currency.exchange_rates(rates, amount, from, to, opts)
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  @doc """
-  Same as `exchange_historic_rate/5`, but raises an error if the request fails.
-  """
-  def exchange_historic_rate!(date, amount, from, to, opts \\ []) do
-    case get_historic_rate(date, opts) do
-      {:ok, %Forex{rates: rates}} -> Currency.exchange_rates!(rates, amount, from, to, opts)
-      {:error, {exception, reason}} -> raise exception, reason
-      {:error, reason} -> raise Forex.FeedError, reason
-    end
-  end
-
   ## Exchange Rates
 
   @doc """
@@ -232,17 +151,15 @@ defmodule Forex do
 
     case Fetcher.get(:latest_rates, use_cache: opts[:use_cache], feed_fn: opts[:feed_fn]) do
       {:ok, entries} ->
-        result =
-          Enum.map(entries, fn %{time: datetime, rates: rates} ->
-            %Forex{
-              base: base,
-              date: map_date(datetime),
-              rates: map_rates(rates, opts)
-            }
-          end)
-          |> List.first()
-
-        {:ok, result}
+        Enum.map(entries, fn %{time: datetime, rates: rates} ->
+          %Forex{
+            base: base,
+            date: map_date(datetime),
+            rates: map_rates(rates, opts)
+          }
+        end)
+        |> List.first()
+        |> then(&{:ok, &1})
 
       {:error, reason} ->
         {:error, reason}
@@ -365,7 +282,7 @@ defmodule Forex do
   ## Options
   #{NimbleOptions.docs(Forex.Options.rates_schema())}
   """
-  @spec get_historic_rate(maybe_date(), opts :: [Options.rates_option()]) ::
+  @spec get_historic_rate(parsable_date(), opts :: [Options.rates_option()]) ::
           {:ok, t()} | {:error, term}
   def get_historic_rate(date, opts \\ [])
 
@@ -376,7 +293,7 @@ defmodule Forex do
     end
   end
 
-  def get_historic_rate(%Date{calendar: Calendar.ISO} = date, opts) when is_list(opts) do
+  def get_historic_rate(%Date{} = date, opts) do
     case historic_rates(opts) do
       {:ok, rates} ->
         case find_historic_rate_date(rates, date) do
@@ -400,7 +317,7 @@ defmodule Forex do
   @doc """
   Same as `get_historic_rate/2`, but raises an error if the request fails.
   """
-  @spec get_historic_rate!(maybe_date(), opts :: [Options.rates_option()]) :: t()
+  @spec get_historic_rate!(parsable_date(), opts :: [Options.rates_option()]) :: t()
   def get_historic_rate!(date, opts \\ [])
 
   def get_historic_rate!(date, opts) when is_binary(date) or is_tuple(date) do
@@ -410,7 +327,7 @@ defmodule Forex do
     end
   end
 
-  def get_historic_rate!(%Date{calendar: Calendar.ISO} = date, opts) when is_list(opts) do
+  def get_historic_rate!(%Date{} = date, opts) do
     case get_historic_rate(date, opts) do
       {:ok, rates} -> rates
       {:error, {exception, reason}} -> raise exception, reason
@@ -438,8 +355,11 @@ defmodule Forex do
   ]}
   ```
   """
-  @spec get_historic_rates_between(maybe_date(), maybe_date(), opts :: [Options.rates_option()]) ::
-          {:ok, [t()]} | {:error, term}
+  @spec get_historic_rates_between(
+          start_date :: parsable_date(),
+          end_date :: parsable_date(),
+          opts :: [Options.rates_option()]
+        ) :: {:ok, [t()]} | {:error, term}
   def get_historic_rates_between(start_date, end_date, opts \\ [])
 
   def get_historic_rates_between(start_date, end_date, opts)
@@ -450,11 +370,7 @@ defmodule Forex do
     end
   end
 
-  def get_historic_rates_between(
-        %Date{calendar: Calendar.ISO} = start_date,
-        %Date{calendar: Calendar.ISO} = end_date,
-        opts
-      )
+  def get_historic_rates_between(%Date{} = start_date, %Date{} = end_date, opts)
       when is_list(opts) do
     case historic_rates(opts) do
       {:ok, entries} ->
@@ -474,7 +390,11 @@ defmodule Forex do
   @doc """
   Same as `get_historic_rates_between/3`, but raises an error if the request fails.
   """
-  @spec get_historic_rates_between!(maybe_date(), maybe_date(), opts :: [Options.rates_option()]) ::
+  @spec get_historic_rates_between!(
+          start_date :: parsable_date(),
+          end_date :: parsable_date(),
+          opts :: [Options.rates_option()]
+        ) ::
           [t()]
   def get_historic_rates_between!(start_date, end_date, opts \\ [])
 
@@ -489,8 +409,8 @@ defmodule Forex do
   end
 
   def get_historic_rates_between!(
-        %Date{calendar: Calendar.ISO} = start_date,
-        %Date{calendar: Calendar.ISO} = end_date,
+        %Date{} = start_date,
+        %Date{} = end_date,
         opts
       )
       when is_list(opts) do
@@ -528,10 +448,110 @@ defmodule Forex do
     end
   end
 
+  ## Currency Exchange
+
+  @doc """
+  Exchange a given amount from one currency to another.
+  It will use the cached exchange rates from the European Central
+  Bank (ECB) or fetch the latest rates if the cache is disabled.
+
+  ## Options
+  #{NimbleOptions.docs(Forex.Options.currency_schema())}
+
+  ## Examples
+
+  ```elixir
+  iex> Forex.exchange(100, "USD", "EUR")
+  {:ok, Decimal.new("91.86100")}
+
+  iex> Forex.exchange(420, :eur, :gbp, format: :string)
+  {:ok, "353.12760"}
+
+  iex> Forex.exchange(123, :gbp, :usd, format: :string, round: 1)
+  {:ok, "159.3"}
+  ```
+  """
+  @spec exchange(
+          amount :: Currency.input_amount(),
+          from_currency :: Currency.code(),
+          to_currency :: Currency.code(),
+          opts :: [Options.currency_option()]
+        ) ::
+          {:ok, Currency.output_amount()} | {:error, term}
+  def exchange(amount, from_currency, to_currency, opts \\ []) do
+    with {:ok, _} <- Currency.validate_currencies(from_currency, to_currency),
+         {:ok, %{rates: rates}} <- Forex.latest_rates(base: from_currency, keys: :strings) do
+      Currency.exchange_rates(rates, amount, from_currency, to_currency, opts)
+    end
+  end
+
+  @doc """
+  Same as `exchange/3`, but raises an error if the request fails.
+  """
+  @spec exchange!(
+          amount :: Currency.input_amount(),
+          from_currency :: Currency.code(),
+          to_currency :: Currency.code(),
+          opts :: [Options.currency_option()]
+        ) :: Currency.output_amount()
+  def exchange!(amount, from_currency, to_currency, opts \\ []) do
+    case exchange(amount, from_currency, to_currency, opts) do
+      {:ok, result} -> result
+      {:error, reason} -> raise Forex.CurrencyError, "Currency exchange failed: #{reason}"
+    end
+  end
+
+  @doc """
+  Given a specific date, amount, and two currencies, it will return the
+  exchange rate for that date.
+
+  ## Options
+  #{NimbleOptions.docs(Forex.Options.currency_schema())}
+
+  ## Examples
+
+  ```elixir
+  iex> Forex.exchange_historic_rate("2023-01-01", 100, "USD", "EUR")
+  {:ok, Decimal.new("91.86100")}
+  iex> Forex.exchange_historic_rate(~D[2023-01-01], 420, :eur, :gbp, format: :string)
+  {:ok, "353.12760"}
+  """
+  @spec exchange_historic_rate(
+          date :: parsable_date(),
+          amount :: Currency.input_amount(),
+          from :: Currency.code(),
+          to :: Currency.code(),
+          opts :: [Options.rates_option()]
+        ) :: {:ok, Currency.output_amount()} | {:error, term}
+  def exchange_historic_rate(date, amount, from, to, opts \\ []) do
+    case get_historic_rate(date, opts) do
+      {:ok, %Forex{rates: rates}} -> Currency.exchange_rates(rates, amount, from, to, opts)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @doc """
+  Same as `exchange_historic_rate/5`, but raises an error if the request fails.
+  """
+  def exchange_historic_rate!(date, amount, from, to, opts \\ []) do
+    case get_historic_rate(date, opts) do
+      {:ok, %Forex{rates: rates}} -> Currency.exchange_rates!(rates, amount, from, to, opts)
+      {:error, {exception, reason}} -> raise exception, reason
+      {:error, reason} -> raise Forex.FeedError, reason
+    end
+  end
+
   ## Private Functions
 
   # Map the rates response to the format %{currency_code() => Decimal.t()}
   # If not EUR based currency we rebase the rates to the new base currency
+  @spec map_rates(
+          rates ::
+            {:ok, [%{currency: Currency.code(), rate: String.t()}]}
+            | [%{currency: Currency.code(), rate: String.t()}]
+            | {:error, term},
+          opts :: [Options.rates_option()]
+        ) :: {:ok, rate()} | {:error, term}
   defp map_rates({:error, reason}, _), do: {:error, reason}
   defp map_rates({:ok, rates}, opts), do: map_rates(rates, opts)
 
@@ -547,8 +567,8 @@ defmodule Forex do
         end)
         |> Enum.into(%{})
 
-      error ->
-        error
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

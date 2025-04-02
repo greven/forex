@@ -64,12 +64,12 @@ the `Forex.Fetcher.Supervisor.start_link/1` function in your application supervi
 
 ### HTTP Client
 
-By default, `Forex` uses the `Req` HTTP client in `Forex.Feed.API.HTTP` to fetch the exchange rates from
+By default, `Forex` uses the `Req` HTTP client in `Forex.Feed.Req` to fetch the exchange rates from
 the European Central Bank. To use a different HTTP client, define your own implementation of
 the `Forex.Feed.API` behaviour and pass it to the `Forex` module in your `config.exs` file:
 
 ```elixir
-config :forex, feed_api: MyApp.Forex.API
+config :forex, feed_api: MyApp.Forex.APIClient
 ```
 
 

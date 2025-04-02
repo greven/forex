@@ -8,8 +8,15 @@ defmodule Forex.Cache do
 
   The default implementation uses ETS as the cache storage.
   You can override the cache module by setting the `:cache_module` configuration
-  option in the `Forex.Fetcher` module options.
+  option in the `Forex.Fetcher` module options. For example:
+
+  ```elixir
+  config :forex,
+    cache_module: MyApp.ForexCache
+  ```
   """
+
+  @cache_mod Application.compile_env(:forex, :cache_module, Forex.Cache.ETS)
 
   @doc """
   Inits the cache.
@@ -70,8 +77,7 @@ defmodule Forex.Cache do
   """
   @callback initialized?() :: boolean()
 
-  def cache_mod,
-    do: Forex.Fetcher.options()[:cache_module]
+  def cache_mod, do: @cache_mod
 
   def latest_rates,
     do: cache_mod().get(:latest_rates)

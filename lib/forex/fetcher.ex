@@ -10,69 +10,38 @@ defmodule Forex.Fetcher do
   By default, the exchange rates are fetched from the feed every 12 hours as
   the European Central Bank (ECB) updates the reference rates at around 16:00 CET
   every working day. This can be configured by setting the `:schedular_interval`
-  option in the `Forex` application environment, example, to fetch the rates
-  every 24 hours:
-
-  To configure the `Forex.Fetcher` module, the following options are available:
-
-  * `use_cache` - A boolean value that determines if the cache should be used.
-    The default value is `true`.
-
-  * `cache_module` - The cache module to use. The default value is `Forex.Cache.ETS`.
-
-  * `schedular_interval` - The interval in milliseconds to fetch the exchange rates
-    from the feed. The default value is `12 hours`.
+  option in the `Forex` application environment or by passing it as an option
+  when starting the `Forex.Fetcher` process.
   """
 
   use GenServer
-
-  alias __MODULE__
+  require Logger
 
   alias Forex.Cache
-  alias Forex.Feed
+  alias Forex.Options
 
-  ##  Options
-
-  @default_cache_module Forex.Cache.ETS
-  @default_schedular_interval :timer.hours(12)
-
-  defp options_schema do
-    NimbleOptions.new!(
-      use_cache: [
-        type: :boolean,
-        default: Application.get_env(:forex, :use_cache, true)
-      ],
-      cache_module: [
-        type: :atom,
-        default: Application.get_env(:forex, :cache_module, @default_cache_module)
-      ],
-      schedular_interval: [
-        type: :integer,
-        default: Application.get_env(:forex, :schedular_interval, @default_schedular_interval)
-      ]
-    )
-  end
-
-  @doc """
-  Validate and return the options for the `Forex.Fetcher` module functions,
-  using default values if the options are not provided.
-  """
-
-  def options(opts \\ []) do
-    opts
-    |> NimbleOptions.validate!(options_schema())
-    |> Enum.into(%{})
-  end
+  @scheduled ~w(latest_rates last_ninety_days_rates)a
 
   ## Client Interface
 
-  @doc false
-  def start_link(opts \\ Fetcher.options()) do
+  @doc """
+  Start the `Forex.Fetcher` process linked to the current process
+  with the given options.
+
+  ## Options
+  #{NimbleOptions.docs(Options.fetcher_schema())}
+  """
+  def start_link(opts \\ Options.fetcher_options()) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  @doc false
-  def start(opts \\ Fetcher.options()) do
+  @doc """
+  Start the `Forex.Fetcher` process with the given options.
+
+  ## Options
+  #{NimbleOptions.docs(Options.fetcher_schema())}
+  """
+  def start(opts \\ Options.fetcher_options()) do
     Forex.Fetcher.Supervisor.start_fetcher(opts)
   end
 
@@ -86,97 +55,107 @@ defmodule Forex.Fetcher do
   * `:last_ninety_days_rates` - Fetch the exchange rates for the last 90 days.
   * `:historic_rates` - Fetch the exchange rates for a specific date.
 
-  The `opts` can be a keyword list with the module options, that is,
-  the options returned from the `Forex.Fetcher.options/1` function.
+  ## Options
+  #{NimbleOptions.docs(Options.fetcher_schema())}
   """
-  def get(key, opts \\ [])
+  def get(key, opts \\ Options.fetcher_options())
 
   def get(:latest_rates, opts) do
-    feed_fn = Keyword.get(opts, :feed_fn) || {Feed, :latest_rates, []}
-    fetch_rates(:latest_rates, feed_fn, opts)
+    fetch_rates(:latest_rates, opts)
   end
 
   def get(:last_ninety_days_rates, opts) do
-    feed_fn = Keyword.get(opts, :feed_fn) || {Feed, :last_ninety_days_rates, []}
-    fetch_rates(:last_ninety_days_rates, feed_fn, opts)
+    fetch_rates(:last_ninety_days_rates, opts)
   end
 
   def get(:historic_rates, opts) do
-    feed_fn = Keyword.get(opts, :feed_fn) || {Feed, :historic_rates, []}
-    fetch_rates(:historic_rates, feed_fn, opts)
+    fetch_rates(:historic_rates, opts)
   end
+
+  @doc """
+  Get the options used to start the `Forex.Fetcher` process.
+  """
+  def get_options, do: GenServer.call(__MODULE__, :options)
 
   ## Server Callbacks
 
   @doc false
   def init(opts) do
-    if opts.use_cache, do: opts.cache_module.init()
+    if opts[:use_cache], do: Cache.cache_mod().init()
+
+    {:ok, opts, {:continue, :init_schedule}}
+  end
+
+  def handle_continue(:init_schedule, opts) do
     schedule_work(:latest_rates, 0)
     schedule_work(:last_ninety_days_rates, 0)
 
-    {:ok, opts}
+    Logger.info("Forex: Exchange rates updated!")
+
+    {:noreply, opts}
   end
 
   @doc false
-  def terminate(:normal, opts) do
-    opts.cache_module.terminate()
-  end
-
-  @doc false
-  def terminate(:shutdown, opts) do
-    opts.cache_module.terminate()
+  def handle_call(:options, _from, opts) do
+    {:reply, opts, opts}
   end
 
   @doc false
   def handle_info(:latest_rates, opts) do
-    fetch_opts = Keyword.new(opts)
-
-    fetch_rates(:latest_rates, {Feed, :latest_rates, []}, fetch_opts)
-    schedule_work(:latest_rates, opts.schedular_interval)
+    fetch_rates(:latest_rates, opts)
+    schedule_work(:latest_rates, opts[:schedular_interval])
+    Logger.debug("Forex: Fetched latest rates")
 
     {:noreply, opts}
   end
 
   @doc false
   def handle_info(:last_ninety_days_rates, opts) do
-    fetch_opts = Keyword.new(opts)
-
-    fetch_rates(
-      :last_ninety_days_rates,
-      {Feed, :last_ninety_days_rates, []},
-      fetch_opts
-    )
-
-    schedule_work(:last_ninety_days_rates, opts.schedular_interval)
+    fetch_rates(:last_ninety_days_rates, opts)
+    schedule_work(:last_ninety_days_rates, opts[:schedular_interval])
+    Logger.debug("Forex: Fetched last 90 days rates")
 
     {:noreply, opts}
   end
 
+  @doc false
+  def terminate(_reason, opts) do
+    if opts[:use_cache], do: Cache.cache_mod().terminate()
+
+    :ok
+  end
+
   ## Private Functions
 
-  defp fetch_rates(cache_key, feed_fn, opts) do
-    feed_fn = resolve_feed_fn(feed_fn)
+  defp schedule_work(task, interval_ms) when task in @scheduled and is_integer(interval_ms) do
+    Process.send_after(self(), task, interval_ms)
+  end
 
-    use_cache = Cache.initialized?() and Keyword.get(opts, :use_cache, true)
-    schedular_interval = Keyword.get(opts, :schedular_interval, @default_schedular_interval)
+  @spec fetch_rates(atom(), [Options.fetcher_option()]) :: {:ok, any()} | {:error, any()}
+  defp fetch_rates(key, opts) do
+    feed_fn = resolve_feed_fn(key, opts)
+    use_cache = Cache.initialized?() and opts[:use_cache]
 
     if use_cache,
-      do: Cache.resolve(cache_key, feed_fn, ttl: schedular_interval),
+      do: Cache.resolve(key, feed_fn, ttl: opts[:schedular_interval]),
       else: feed_fn.()
   end
 
-  defp resolve_feed_fn({feed_mod, feed_fn, feed_args})
-       when is_atom(feed_mod) and is_atom(feed_fn) and is_list(feed_args) do
-    fn -> apply(feed_mod, feed_fn, feed_args) end
-  end
+  @spec resolve_feed_fn(key :: atom(), opts :: [Options.fetcher_option()]) :: any()
+  defp resolve_feed_fn(key, opts) do
+    feed_fn = Keyword.get(opts, :feed_fn) || {Forex.Feed, key, []}
 
-  defp resolve_feed_fn(feed_fn) when is_function(feed_fn), do: feed_fn
+    case feed_fn do
+      {feed_mod, feed_fn, feed_args}
+      when is_atom(feed_mod) and is_atom(feed_fn) and is_list(feed_args) ->
+        fn -> apply(feed_mod, feed_fn, feed_args) end
 
-  defp schedule_work(:latest_rates, interval_ms) when is_integer(interval_ms) do
-    Process.send_after(self(), :latest_rates, interval_ms)
-  end
+      feed_fn when is_function(feed_fn) ->
+        feed_fn
 
-  defp schedule_work(:last_ninety_days_rates, interval_ms) when is_integer(interval_ms) do
-    Process.send_after(self(), :last_ninety_days_rates, interval_ms)
+      _ ->
+        raise ArgumentError,
+              "Invalid feed function option. Expected an MFA tuple or a function."
+    end
   end
 end

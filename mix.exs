@@ -24,10 +24,10 @@ defmodule Forex.MixProject do
         plt_add_apps: ~w(mix)a,
         flags: [
           :error_handling,
-          :unknown,
-          :underspecs,
           :extra_return,
-          :missing_return
+          :missing_return,
+          :unknown,
+          :underspecs
         ]
       ],
 
@@ -111,16 +111,18 @@ defmodule Forex.MixProject do
   defp aliases do
     [
       "test.all": "test --include integration",
-      release: "git_ops.release",
-      credo: ["credo --strict"]
+      dialyzer: "dialyzer --quiet-with-result",
+      credo: ["credo --strict"],
+      release: "git_ops.release"
     ]
   end
 
   defp test_coverage_ignored do
     [
       ~r(Mix.*),
+      Forex.FeedMock,
+      Forex.CacheMock,
       Forex.FeedFixtures,
-      Forex.Fetcher.Supervisor,
       Forex.CurrencyError,
       Forex.FeedError,
       Forex.DateError

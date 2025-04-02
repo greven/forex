@@ -670,73 +670,15 @@ defmodule Forex.Currency do
 
   @doc """
   Exchange a given amount from one currency to another using ECB rates.
-  Always uses the latest rates available. If you want to provide a specific
-  rates to use with the exchange, use `Forex.exchange_rates/5`.
+
+  The given rates should be a `Forex` struct or a map with the currency codes
+  as keys and the corresponding rates as values.
 
   ## Options
   #{NimbleOptions.docs(Forex.Options.currency_schema())}
-
-  ## Examples
-
-      iex> Forex.exchange(100, :USD, :EUR)
-      {:ok, Decimal.new("95.28300")}
-
-      iex> Forex.exchange(100, "USD", "EUR", format: :string)
-      {:ok, "95.28300"}
-
-      iex> Forex.exchange(100, "INVALID", "EUR")
-      {:error, :invalid_currency}
-  """
-  @spec exchange(
-          amount :: input_amount(),
-          from_currency :: code(),
-          to_currency :: code(),
-          opts :: [Options.currency_option()]
-        ) :: {:ok, output_amount()} | {:error, term()}
-  def exchange(amount, from_currency, to_currency, opts \\ [])
-
-  def exchange(amount, from_currency, to_currency, opts)
-      when is_currency_amount(amount) and is_currency_code(from_currency) and
-             is_currency_code(to_currency) do
-    with from_currency <- Support.stringify_code(from_currency),
-         to_currency <- Support.stringify_code(to_currency),
-         {:ok, _} <- validate_currencies(from_currency, to_currency),
-         {:ok, %{rates: rates}} <- Forex.latest_rates(base: from_currency, keys: :strings) do
-      from_rate = Map.get(rates, from_currency)
-      to_rate = Map.get(rates, to_currency)
-
-      {:ok, do_exchange(amount, from_rate, to_rate, opts)}
-    else
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  def exchange(_, _, _, _), do: {:error, :invalid_exchange}
-
-  @doc """
-  Exchange a given amount from one currency to another using ECB rates.
-  Like `exchange/4`, but raises a `Forex.CurrencyError` if the exchange fails.
-  """
-
-  @spec exchange!(
-          amount :: input_amount(),
-          from_currency :: code(),
-          to_currency :: code(),
-          opts :: [Options.currency_option()]
-        ) :: output_amount()
-  def exchange!(amount, from_currency, to_currency, opts \\ []) do
-    case exchange(amount, from_currency, to_currency, opts) do
-      {:ok, result} -> result
-      {:error, reason} -> raise Forex.CurrencyError, "Currency exchange failed: #{reason}"
-    end
-  end
-
-  @doc """
-  Like `exchange/4`, but uses the provided rates instead of using the latest
-  available rates. This is useful for example if we want to use historical rates.
   """
   @spec exchange_rates(
-          rates :: %{code() => output_amount()},
+          rates :: Forex.t() | %{code() => input_amount()},
           amount :: input_amount(),
           from_currency :: code(),
           to_currency :: code(),
@@ -745,12 +687,17 @@ defmodule Forex.Currency do
           {:ok, output_amount()} | {:error, term()}
   def exchange_rates(rates, amount, from_currency, to_currency, opts \\ [])
 
+  def exchange_rates(%Forex{rates: rates}, amount, from_currency, to_currency, opts) do
+    exchange_rates(rates, amount, from_currency, to_currency, opts)
+  end
+
   def exchange_rates(rates, amount, from_currency, to_currency, opts)
       when is_map(rates) and is_currency_amount(amount) and is_currency_code(from_currency) and
              is_currency_code(to_currency) do
-    with from <- Support.stringify_code(from_currency),
-         to <- Support.stringify_code(to_currency),
-         {:ok, _} <- validate_currencies(from, to) do
+    with from_currency <- Support.stringify_code(from_currency),
+         to_currency <- Support.stringify_code(to_currency),
+         rates <- map_exchange_rates(rates),
+         {:ok, _} <- validate_currencies(from_currency, to_currency) do
       from_rate = Map.get(rates, from_currency)
       to_rate = Map.get(rates, to_currency)
 
@@ -759,6 +706,8 @@ defmodule Forex.Currency do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  def exchange_rates(_, _, _, _, _), do: {:error, :invalid_exchange}
 
   @doc """
   Like `exchange_rates/5`, but raises a `Forex.CurrencyError` if the exchange fails.
@@ -772,7 +721,7 @@ defmodule Forex.Currency do
 
   @spec validate_currencies(from :: code(), to :: code()) ::
           {:ok, {code(), code()}} | {:error, :invalid_currency}
-  defp validate_currencies(from, to) do
+  def validate_currencies(from, to) do
     case {exists?(from), exists?(to)} do
       {true, true} -> {:ok, {from, to}}
       _ -> {:error, :invalid_currency}
@@ -856,8 +805,22 @@ defmodule Forex.Currency do
     end
   end
 
+  ## Private Helpers
+
   # Converts a currency value from one currency to another.
   defp convert_rate(%Decimal{} = currency_value, new_base_value) do
     Decimal.div(currency_value, new_base_value)
+  end
+
+  # Given a list of rates convert the rates to a map with the currency codes
+  # as string keys and the rates as Decimal values.
+  @spec map_exchange_rates(%{:currency => code(), :rate => String.t()}) ::
+          %{String.t() => Decimal.t()}
+  defp map_exchange_rates(rates) when is_map(rates) do
+    Map.put(rates, "EUR", "1.00000")
+    |> Enum.map(fn {code, value} ->
+      {Support.stringify_code(code), Support.format_value(value, :decimal)}
+    end)
+    |> Enum.into(%{})
   end
 end

@@ -1,6 +1,6 @@
-defmodule Forex.Feed.Parser.ParserSweetXml do
+defmodule Forex.Feed.SweetXmlParser do
   @moduledoc """
-  This module implements the Forex.Parser behaviour using the SweetXml library.
+  This module implements the `Forex.Feed.Parser` behaviour using the SweetXml library.
   """
 
   import SweetXml

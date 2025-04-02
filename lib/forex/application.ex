@@ -5,7 +5,9 @@ defmodule Forex.Application do
 
   @impl true
   def start(_type, args) do
-    children = [Forex.Fetcher.Supervisor]
+    children = [
+      Forex.Fetcher.Supervisor
+    ]
 
     opts =
       if args == [],

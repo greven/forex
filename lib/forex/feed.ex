@@ -29,14 +29,14 @@ defmodule Forex.Feed do
   def path(:historic_rates), do: "/eurofxref-hist.xml"
 
   @doc """
-  The API module to use for fetching the exchange rates, by default uses the HTTP API.
-  The API module must implement the `Forex.Feed.API` behaviour.
+  The API module to use for fetching the exchange rates, by default uses
+  `Forex.Feed.Req`. The API module must implement the `Forex.Feed.API` behaviour.
 
   This is useful for testing purposes, where you can provide a mock API module or
   for using a different API module, for example, an API module that uses a different
   HTTP client.
   """
-  def api_mod, do: Application.get_env(:forex, :feed_api, __MODULE__.API.HTTP)
+  def api_mod, do: Application.get_env(:forex, :feed_api, Forex.Feed.Req)
 
   @doc """
   Fetches the latest exchange rates from the European Central Bank (ECB).

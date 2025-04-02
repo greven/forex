@@ -16,28 +16,13 @@ defmodule Forex.Fetcher.Supervisor do
   use Supervisor
 
   alias Forex.Fetcher
-
-  ##  Options
-
-  defp options_schema do
-    NimbleOptions.new!(
-      auto_start: [
-        type: :boolean,
-        default: Application.get_env(:forex, :auto_start, true)
-      ]
-    )
-  end
-
-  def options(opts \\ []) do
-    opts
-    |> NimbleOptions.validate!(options_schema())
-  end
+  alias Forex.Options
 
   ## Client Interface
 
   @doc false
   def start_link(opts) do
-    options = options(opts)
+    options = Options.fetcher_supervisor_options(opts)
     supervisor = start_link()
 
     if options[:auto_start], do: start_fetcher!()
@@ -94,7 +79,7 @@ defmodule Forex.Fetcher.Supervisor do
   @doc """
   Start the Forex exchange rate fetcher process.
   """
-  def start_fetcher(opts \\ Fetcher.options()) do
+  def start_fetcher(opts \\ Options.fetcher_options()) do
     Supervisor.start_child(__MODULE__, fetcher_spec(opts))
   end
 
@@ -119,19 +104,19 @@ defmodule Forex.Fetcher.Supervisor do
     Supervisor.delete_child(__MODULE__, Fetcher)
   end
 
-  ## Internal Functions
+  ## Private Functions
 
   defp start_fetcher! do
     case Fetcher.start() do
       {:ok, _pid} -> :ok
-      {:error, reason} -> raise "Error starting exchange rate fetcher fetcher: #{inspect(reason)}"
+      {:error, reason} -> raise "Error starting exchange rate fetcher: #{inspect(reason)}"
     end
   end
 
   defp fetcher_spec(opts) do
     %{
       id: Fetcher,
-      start: {Fetcher, :start_link, [opts]}
+      start: {Forex.Fetcher, :start_link, [opts]}
     }
   end
 end

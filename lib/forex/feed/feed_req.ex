@@ -1,4 +1,4 @@
-defmodule Forex.Feed.API.HTTP do
+defmodule Forex.Feed.Req do
   @moduledoc """
   The default HTTP API module for fetching the exchange rates from the European Central Bank (ECB).
   It implements the `Forex.Feed.API` behaviour and it uses `Req` as the HTTP client.

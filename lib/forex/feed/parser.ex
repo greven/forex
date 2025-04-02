@@ -13,7 +13,7 @@ defmodule Forex.Feed.Parser do
   @callback parse_rates(binary) :: list(rate())
 
   def parser_mod,
-    do: Application.get_env(:forex, :feed_parser, __MODULE__.ParserSweetXml)
+    do: Application.get_env(:forex, :feed_parser, Forex.Feed.SweetXmlParser)
 
   def parse_rates(body), do: parser_mod().parse_rates(body)
 end

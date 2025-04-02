@@ -4,8 +4,8 @@ defmodule Forex.Support do
   formatting the exchange rates values.
   """
 
-  @type parsable_date() ::
-          String.t() | Date.t() | DateTime.t() | {integer(), integer(), integer()}
+  @typep parsable_date() ::
+           Date.t() | DateTime.t() | String.t() | {integer(), integer(), integer()}
 
   @doc """
   Convert the currency code to a default string representation (uppercase string).
