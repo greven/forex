@@ -83,14 +83,26 @@ defmodule Forex.Fetcher do
   def init(opts) do
     if opts[:use_cache], do: Cache.cache_mod().init()
 
+    # Schedule the next refreshes
+    schedule_work(:latest_rates, opts[:schedular_interval])
+    schedule_work(:last_ninety_days_rates, opts[:schedular_interval])
+
     {:ok, opts, {:continue, :init_schedule}}
   end
 
+  @doc false
   def handle_continue(:init_schedule, opts) do
-    schedule_work(:latest_rates, 0)
-    schedule_work(:last_ninety_days_rates, 0)
+    tasks = [
+      Task.async(fn -> fetch_rates(:latest_rates, opts) end),
+      Task.async(fn -> fetch_rates(:last_ninety_days_rates, opts) end)
+    ]
 
-    Logger.info("Forex: Exchange rates updated!")
+    Task.await_many(tasks, 20000)
+    |> Enum.all?(fn result -> match?({:ok, _}, result) end)
+    |> case do
+      true -> Logger.info("Forex: Exchange rates updated!")
+      false -> Logger.warning("Forex: Some exchange rates failed to update!")
+    end
 
     {:noreply, opts}
   end
@@ -104,7 +116,6 @@ defmodule Forex.Fetcher do
   def handle_info(:latest_rates, opts) do
     fetch_rates(:latest_rates, opts)
     schedule_work(:latest_rates, opts[:schedular_interval])
-    Logger.debug("Forex: Fetched latest rates")
 
     {:noreply, opts}
   end
@@ -113,7 +124,6 @@ defmodule Forex.Fetcher do
   def handle_info(:last_ninety_days_rates, opts) do
     fetch_rates(:last_ninety_days_rates, opts)
     schedule_work(:last_ninety_days_rates, opts[:schedular_interval])
-    Logger.debug("Forex: Fetched last 90 days rates")
 
     {:noreply, opts}
   end
