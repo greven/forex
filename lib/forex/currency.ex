@@ -671,14 +671,14 @@ defmodule Forex.Currency do
   @doc """
   Exchange a given amount from one currency to another using ECB rates.
 
-  The given rates should be a `Forex` struct or a map with the currency codes
-  as keys and the corresponding rates as values.
+  The given rates should be a `Forex` struct (or an `{:ok, %{Forex}}` tuple) or
+  a map with the currency codes as keys and the corresponding rates as values.
 
   ## Options
   #{NimbleOptions.docs(Forex.Options.currency_schema())}
   """
   @spec exchange_rates(
-          rates :: Forex.t() | %{code() => input_amount()},
+          rates :: {:ok, Forex.t()} | Forex.t() | %{code() => input_amount()},
           amount :: input_amount(),
           from_currency :: code(),
           to_currency :: code(),
@@ -686,6 +686,10 @@ defmodule Forex.Currency do
         ) ::
           {:ok, output_amount()} | {:error, term()}
   def exchange_rates(rates, amount, from_currency, to_currency, opts \\ [])
+
+  def exchange_rates({:ok, %Forex{rates: rates}}, amount, from_currency, to_currency, opts) do
+    exchange_rates(rates, amount, from_currency, to_currency, opts)
+  end
 
   def exchange_rates(%Forex{rates: rates}, amount, from_currency, to_currency, opts) do
     exchange_rates(rates, amount, from_currency, to_currency, opts)
