@@ -12,7 +12,7 @@ defmodule Forex.Cache.DETS do
     path = dets_file_path()
     path |> to_string() |> Path.dirname() |> File.mkdir_p!()
 
-    case :dets.open_file(@table, file: path) do
+    case :dets.open_file(@table, file: path, auto_save: 10_000) do
       {:ok, table_name} ->
         table_name
 
