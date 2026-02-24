@@ -103,7 +103,7 @@ defmodule Forex.Fetcher do
       Task.async(fn -> fetch_rates(:last_ninety_days_rates, opts) end)
     ]
 
-    Task.await_many(tasks, 20000)
+    Task.await_many(tasks, 20_000)
     |> Enum.all?(fn result -> match?({:ok, _}, result) end)
     |> case do
       true -> Logger.debug("Forex: Exchange rates updated!")
