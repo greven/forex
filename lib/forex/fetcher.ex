@@ -32,7 +32,8 @@ defmodule Forex.Fetcher do
   #{NimbleOptions.docs(Options.fetcher_schema())}
   """
   def start_link(opts \\ Options.fetcher_options()) do
-    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @doc """
@@ -73,9 +74,14 @@ defmodule Forex.Fetcher do
   end
 
   @doc """
+  Returns the default options for the `Forex.Fetcher` process.
+  """
+  def options, do: Options.fetcher_options()
+
+  @doc """
   Get the options used to start the `Forex.Fetcher` process.
   """
-  def get_options, do: GenServer.call(__MODULE__, :options)
+  def get_options(server \\ __MODULE__), do: GenServer.call(server, :options)
 
   ## Server Callbacks
 
@@ -100,7 +106,7 @@ defmodule Forex.Fetcher do
     Task.await_many(tasks, 20000)
     |> Enum.all?(fn result -> match?({:ok, _}, result) end)
     |> case do
-      true -> Logger.info("Forex: Exchange rates updated!")
+      true -> Logger.debug("Forex: Exchange rates updated!")
       false -> Logger.warning("Forex: Some exchange rates failed to update!")
     end
 

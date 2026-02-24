@@ -1,4 +1,4 @@
-defmodule Forex.FeedAPIMock do
+defmodule Forex.FeedMock do
   @moduledoc false
 
   @behaviour Forex.Feed.API

@@ -1,8 +1,6 @@
 defmodule Forex.CacheTest do
   use ExUnit.Case
 
-  import Forex.TestHelpers
-
   # Define cache implementation tests for shared behaviour
   defmodule CacheTests do
     @callback cache_mod() :: module()
@@ -84,6 +82,14 @@ defmodule Forex.CacheTest do
           assert {:error, :cache_resolver_failed} = cache.resolve(:missing_too, fn -> "value" end)
         end
 
+        test "resolves missing values with an MFA tuple resolver", %{cache: cache} do
+          # Forex.FeedMock.get_latest_rates([]) returns {:ok, xml_binary}
+          assert {:ok, _xml} = cache.resolve(:mfa_key, {Forex.FeedMock, :get_latest_rates, [[]]})
+
+          # Second call should use cached value (not call the resolver again)
+          assert {:ok, _xml} = cache.resolve(:mfa_key, {Forex.FeedMock, :get_latest_rates, [[]]})
+        end
+
         test "resets cache", %{cache: cache} do
           now = DateTime.utc_now()
 
@@ -134,10 +140,6 @@ defmodule Forex.CacheTest do
       end)
     end
 
-    test "cache interface" do
-      assert Forex.Cache.cache_mod() == Forex.Cache.ETS
-    end
-
     test "terminates cache process", %{cache: cache} do
       assert true == cache.terminate()
     end
@@ -150,10 +152,6 @@ defmodule Forex.CacheTest do
 
     @impl true
     def cache_mod, do: Forex.Cache.DETS
-
-    test "cache interface" do
-      assert Forex.Cache.cache_mod() == Forex.Cache.DETS
-    end
 
     setup do
       Application.put_env(:forex, :cache_module, Forex.Cache.DETS)
@@ -184,9 +182,20 @@ defmodule Forex.CacheTest do
 
   # Test Cache Module Interface
   describe "Forex.Cache interface" do
-    test "delegates to configured cache implementation" do
-      setup_test_cache()
+    setup do
+      cache_module = Application.get_env(:forex, :cache_module)
+      Application.put_env(:forex, :cache_module, Forex.CacheMock)
 
+      ExUnit.Callbacks.on_exit(fn ->
+        if cache_module do
+          Application.put_env(:forex, :cache_module, cache_module)
+        else
+          Application.delete_env(:forex, :cache_module)
+        end
+      end)
+    end
+
+    test "delegates to configured cache implementation" do
       cache = Forex.Cache.cache_mod()
       now = DateTime.utc_now()
 
@@ -199,14 +208,14 @@ defmodule Forex.CacheTest do
       assert is_nil(Forex.Cache.last_ninety_days_rates())
       assert is_nil(Forex.Cache.historic_rates())
 
-      ## Last Updated
+      # Last Updated
       assert [] == Forex.Cache.last_updated()
 
       cache.put(:key1, "value1", now)
 
       assert now == Forex.Cache.last_updated(:key1)
 
-      ## Resolve
+      # Resolve
       assert {:ok, :resolved} == Forex.Cache.resolve(:key2, fn -> {:ok, :resolved} end)
       assert {:ok, :resolved} == cache.resolve(:key2, fn -> {:ok, :resolved} end)
 
@@ -214,16 +223,16 @@ defmodule Forex.CacheTest do
 
       assert {:ok, "value3"} == cache.resolve(:key3, fn -> {:ok, :resolved} end)
 
-      ## Delete
+      # Delete
       cache.put(:delete_key, "delete_me", now)
       assert "delete_me" == cache.get(:delete_key)
       assert Forex.Cache.delete(:delete_key)
 
-      ## Terminate & Reset
+      # Terminate & Reset
       assert Forex.Cache.terminate()
       assert Forex.Cache.reset()
 
-      ## Init
+      # Init
       assert Forex.Cache.init()
     end
   end

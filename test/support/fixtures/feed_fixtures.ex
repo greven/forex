@@ -10,7 +10,7 @@ defmodule Forex.FeedFixtures do
     File.read!(Path.join(@data_dir, "eurofxref-single.xml"))
   end
 
-  def single_rate_fixture do
+  def single_rates_fixture do
     daily_feed_fixture()
     |> Feed.Parser.parse_rates()
   end
@@ -24,10 +24,10 @@ defmodule Forex.FeedFixtures do
     |> Feed.Parser.parse_rates()
   end
 
-  def get_single_rate_fixture(iso_code) do
+  def get_single_rates_fixture(iso_code) do
     iso_code = Support.stringify_code(iso_code)
 
-    single_rate_fixture()
+    single_rates_fixture()
     |> List.first()
     |> Map.get(:rates)
     |> Enum.find(fn
@@ -46,13 +46,13 @@ defmodule Forex.FeedFixtures do
 
     rate =
       if base == "EUR" do
-        {:ok, currency_rate} = get_single_rate_fixture(iso_code)
+        {:ok, currency_rate} = get_single_rates_fixture(iso_code)
 
         currency_rate[:rate]
         |> Support.format_value(format)
         |> Support.round_value(5)
       else
-        {:ok, currency_base_rate} = get_single_rate_fixture(base)
+        {:ok, currency_base_rate} = get_single_rates_fixture(base)
 
         Decimal.new("1.0")
         |> Decimal.div(currency_base_rate[:rate])

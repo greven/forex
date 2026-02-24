@@ -113,6 +113,7 @@ erl_crash.dump
 # Elixir language server
 .elixir_ls/
 .elixir-tools/
+.expert
 
 # The directory NPM downloads your dependencies sources to.
 /assets/node_modules/

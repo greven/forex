@@ -22,16 +22,17 @@ defmodule Forex.Fetcher.Supervisor do
 
   @doc false
   def start_link(opts) do
+    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
     options = Options.fetcher_supervisor_options(opts)
-    supervisor = start_link()
+    supervisor = start_supervisor(name)
 
-    if options[:auto_start], do: start_fetcher!()
+    if options[:auto_start], do: start_fetcher!(name)
 
     supervisor
   end
 
-  defp start_link do
-    Supervisor.start_link(__MODULE__, :ok, name: __MODULE__)
+  defp start_supervisor(name) do
+    Supervisor.start_link(__MODULE__, :ok, name: name)
   end
 
   ## Server Callbacks
@@ -42,8 +43,8 @@ defmodule Forex.Fetcher.Supervisor do
   end
 
   @doc false
-  def stop do
-    Supervisor.stop(__MODULE__)
+  def stop(supervisor \\ __MODULE__) do
+    Supervisor.stop(supervisor)
   end
 
   @doc """
@@ -52,10 +53,10 @@ defmodule Forex.Fetcher.Supervisor do
   if it has been initiated but not running, it returns `:stopped`,
   otherwise, it returns `:not_started`.
   """
-  def fetcher_status do
+  def fetcher_status(supervisor \\ __MODULE__) do
     cond do
-      fetcher_running?() -> :running
-      fetcher_initiated?() -> :stopped
+      fetcher_running?(supervisor) -> :running
+      fetcher_initiated?(supervisor) -> :stopped
       true -> :not_started
     end
   end
@@ -63,13 +64,24 @@ defmodule Forex.Fetcher.Supervisor do
   @doc """
   Check if the Forex exchange rate fetcher process is running.
   """
-  def fetcher_running?, do: !!Process.whereis(Fetcher)
+  def fetcher_running?(supervisor \\ __MODULE__) do
+    case Supervisor.which_children(supervisor) do
+      [] ->
+        false
+
+      children ->
+        Enum.any?(children, fn
+          {Fetcher, pid, _type, _args} when is_pid(pid) -> Process.alive?(pid)
+          _ -> false
+        end)
+    end
+  end
 
   @doc """
   Check if the Forex exchange rate fetcher process has been initiated.
   """
-  def fetcher_initiated? do
-    Supervisor.which_children(__MODULE__)
+  def fetcher_initiated?(supervisor \\ __MODULE__) do
+    Supervisor.which_children(supervisor)
     |> Enum.any?(fn
       {Fetcher, _pid, _type, _args} -> true
       _ -> false
@@ -79,35 +91,48 @@ defmodule Forex.Fetcher.Supervisor do
   @doc """
   Start the Forex exchange rate fetcher process.
   """
-  def start_fetcher(opts \\ Options.fetcher_options()) do
-    Supervisor.start_child(__MODULE__, fetcher_spec(opts))
+  def start_fetcher(opts_or_supervisor \\ __MODULE__)
+
+  def start_fetcher(supervisor) when is_atom(supervisor) or is_pid(supervisor) do
+    start_fetcher(supervisor, Options.fetcher_options())
+  end
+
+  def start_fetcher(opts) when is_list(opts) do
+    start_fetcher(__MODULE__, opts)
+  end
+
+  def start_fetcher(supervisor, opts) do
+    {name, rest} = Keyword.pop(opts, :name)
+    fetcher_opts = Options.fetcher_options(rest)
+    fetcher_opts = if name, do: Keyword.put(fetcher_opts, :name, name), else: fetcher_opts
+    Supervisor.start_child(supervisor, fetcher_spec(fetcher_opts))
   end
 
   @doc """
   Stop the Forex exchange rate fetcher process.
   """
-  def stop_fetcher do
-    Supervisor.terminate_child(__MODULE__, Fetcher)
+  def stop_fetcher(supervisor \\ __MODULE__) do
+    Supervisor.terminate_child(supervisor, Fetcher)
   end
 
   @doc """
   Restart the stoped Forex exchange rate fetcher process.
   """
-  def restart_fetcher do
-    Supervisor.restart_child(__MODULE__, Fetcher)
+  def restart_fetcher(supervisor \\ __MODULE__) do
+    Supervisor.restart_child(supervisor, Fetcher)
   end
 
   @doc """
   Delete the Forex exchange rate fetcher process from the supervisor.
   """
-  def delete_fetcher do
-    Supervisor.delete_child(__MODULE__, Fetcher)
+  def delete_fetcher(supervisor \\ __MODULE__) do
+    Supervisor.delete_child(supervisor, Fetcher)
   end
 
   ## Private Functions
 
-  defp start_fetcher! do
-    case Fetcher.start() do
+  defp start_fetcher!(supervisor) do
+    case start_fetcher(supervisor) do
       {:ok, _pid} -> :ok
       {:error, reason} -> raise "Error starting exchange rate fetcher: #{inspect(reason)}"
     end

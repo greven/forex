@@ -1,8 +1,8 @@
 defmodule Forex.CurrencyTest do
   use ExUnit.Case, async: true
 
-  import Forex.TestHelpers
   import Forex.FeedFixtures
+  import Forex.RatesFixtures
 
   alias Forex.Currency
 
@@ -28,12 +28,6 @@ defmodule Forex.CurrencyTest do
     alt_symbols
   )a
 
-  setup_all do
-    setup_test_cache()
-
-    :ok
-  end
-
   describe "is_currency_code/1" do
     test "returns true for valid currency code formats" do
       require Forex.Currency
@@ -51,6 +45,26 @@ defmodule Forex.CurrencyTest do
       refute Currency.is_currency_code(%{})
       refute Currency.is_currency_code([])
       refute Currency.is_currency_code(nil)
+    end
+  end
+
+  describe "is_currency_amount/1" do
+    test "returns true for valid currency amount formats" do
+      require Forex.Currency
+
+      assert Currency.is_currency_amount(100)
+      assert Currency.is_currency_amount(123.45)
+      assert Currency.is_currency_amount("100")
+      assert Currency.is_currency_amount("123.45")
+      assert Currency.is_currency_amount(Decimal.new("100.0"))
+    end
+
+    test "returns false for invalid formats" do
+      require Forex.Currency
+
+      refute Currency.is_currency_amount(%{})
+      refute Currency.is_currency_amount([])
+      refute Currency.is_currency_amount(nil)
     end
   end
 
@@ -74,6 +88,19 @@ defmodule Forex.CurrencyTest do
       assert is_map(Map.get(currencies, :eur))
       assert currency_keys == Enum.to_list(@currency_keys) |> Enum.sort()
     end
+
+    test "returns a map of all currencies with the keys as strings" do
+      currencies = Currency.all(:strings)
+
+      currency_keys =
+        Map.get(currencies, "EUR")
+        |> Map.from_struct()
+        |> Map.keys()
+        |> Enum.sort()
+
+      assert is_map(Map.get(currencies, "EUR"))
+      assert currency_keys == Enum.to_list(@currency_keys) |> Enum.sort()
+    end
   end
 
   describe "available/0" do
@@ -93,6 +120,19 @@ defmodule Forex.CurrencyTest do
         |> Enum.sort()
 
       assert is_map(Map.get(currencies, :eur))
+      assert currency_keys == Enum.to_list(@currency_keys) |> Enum.sort()
+    end
+
+    test "returns a map of all the available currencies with the keys as strings" do
+      currencies = Currency.available(:strings)
+
+      currency_keys =
+        Map.get(currencies, "EUR")
+        |> Map.from_struct()
+        |> Map.keys()
+        |> Enum.sort()
+
+      assert is_map(Map.get(currencies, "EUR"))
       assert currency_keys == Enum.to_list(@currency_keys) |> Enum.sort()
     end
   end
@@ -180,131 +220,111 @@ defmodule Forex.CurrencyTest do
       refute Currency.exists?(:xyz)
       refute Currency.exists?(nil)
     end
+
+    test "returns false for a binary converted to a non-existing atom" do
+      refute Currency.exists?("abcdef")
+      refute Currency.exists?(:ABCDEF)
+    end
   end
 
-  describe "exchange/3" do
-    test "returns the amount in the target currency" do
-      {:ok, usd_rate_value} = get_single_rate_fixture_value(:usd)
-      {:ok, eur_rate_value} = get_single_rate_fixture_value(:eur, base: :usd)
+  describe "exchange_rates/5" do
+    test "successfully converts between currencies given a list of rates" do
+      rates = single_forex_fixture()
 
-      assert {:ok, usd_rate_value} == Currency.exchange(1, :eur, :usd)
-      assert {:ok, Decimal.mult(usd_rate_value, 10)} == Currency.exchange(10, :eur, :usd)
-      assert {:ok, Decimal.new("0.00000")} == Currency.exchange(0, :eur, :usd)
-      assert {:ok, usd_rate_value} == Currency.exchange(1.0, "EUR", "USD")
-      assert {:ok, usd_rate_value} == Currency.exchange("1", "EUR", "USD")
-      assert {:ok, usd_rate_value} == Currency.exchange("1.0", "EUR", "USD")
-      assert {:ok, eur_rate_value} == Currency.exchange(1, "USD", "EUR")
-      assert {:ok, Decimal.mult(eur_rate_value, 10)} == Currency.exchange(10, :usd, :eur)
-      assert %Decimal{} = usd_rate_value
+      assert {:ok, Decimal.new("1.00000")} == Currency.exchange_rates(rates, 1, :eur, :eur)
+      assert {:ok, Decimal.new("1.20210")} == Currency.exchange_rates(rates, 1, :gbp, :eur)
+      assert {:ok, Decimal.new("1.00000")} == Currency.exchange_rates({:ok, rates}, 1, :eur, :eur)
+    end
+
+    test "successfully converts between currencies given a list of rates and format options" do
+      rates = single_forex_fixture()
+
+      assert {:ok, "1.00000"} == Currency.exchange_rates(rates, 1, :eur, :eur, format: :string)
+      assert {:ok, "1.20210"} == Currency.exchange_rates(rates, 1, :gbp, :eur, format: :string)
+
+      assert {:ok, "1.00000"} ==
+               Currency.exchange_rates(rates, 1, :eur, :eur, format: :string)
+
+      assert {:ok, Decimal.new("1.20210")} ==
+               Currency.exchange_rates(rates.rates, 1, :gbp, :eur, format: :decimal)
+
+      assert {:ok, Decimal.new("1.20")} ==
+               Currency.exchange_rates(rates, 1, :gbp, :eur, format: :decimal, round: 2)
+
+      assert {:ok, Decimal.new("1.00000")} ==
+               Currency.exchange_rates({:ok, rates}, 1, :eur, :eur, format: :decimal)
+    end
+
+    test "returns an error on invalid exchanges" do
+      rates = single_forex_fixture()
+
+      assert {:error, :invalid_exchange} == Currency.exchange_rates(rates, nil, :eur, :usd)
+      assert {:error, :invalid_exchange} == Currency.exchange_rates(rates, [], :eur, :usd)
+      assert {:error, :invalid_exchange} == Currency.exchange_rates(rates, 1, nil, :usd)
+      assert {:error, :invalid_exchange} == Currency.exchange_rates(rates, 1, [], :usd)
+      assert {:error, :invalid_exchange} == Currency.exchange_rates([], 1, [], :usd)
+      assert {:error, :invalid_exchange} == Currency.exchange_rates([], 7, :eur, :usd)
+      assert {:error, :invalid_exchange} == Currency.exchange_rates(nil, 7, :eur, :usd)
     end
 
     test "returns an error if the currency with the given iso code does not exist" do
-      refute {:ok, Decimal.new("0.0000")} == Currency.exchange(1, :eur, :xyz)
-      refute {:ok, Decimal.new("0.0000")} == Currency.exchange(1, :usd, :xyz)
-      assert {:error, :invalid_currency} == Currency.exchange(1, "EUR", "XYZ")
-    end
-
-    test "raises an exception if an invalid amount is provided" do
-      assert_raise Forex.FormatError, fn -> Currency.exchange(nil, :eur, :usd) end
-      assert_raise Decimal.Error, fn -> Currency.exchange("abc", "EUR", "USD") end
-    end
-
-    test "handles negative amounts correctly" do
-      {:ok, usd_rate_value} = get_single_rate_fixture_value("USD")
-
-      assert Currency.exchange(-100, :eur, :usd) ==
-               {:ok, Decimal.mult(usd_rate_value, Decimal.new(-100))}
-    end
-
-    test "handles large numbers" do
-      {:ok, usd_rate_value} = get_single_rate_fixture_value(:usd)
-      large_number = "1000000000000"
-      assert {:ok, result} = Currency.exchange(large_number, "EUR", "USD")
-      assert Decimal.eq?(result, Decimal.mult(usd_rate_value, Decimal.new(large_number)))
+      rates = single_forex_fixture()
+      assert {:error, :invalid_currency} == Currency.exchange_rates(rates, 1, :eur, :xyz)
     end
   end
 
-  describe "exchange/4" do
-    test "successfully converts between currencies" do
-      {:ok, usd_rate_value} = get_single_rate_fixture_value(:usd)
-      {:ok, result} = Currency.exchange(1, :eur, :usd)
-      assert Decimal.eq?(result, usd_rate_value)
+  describe "exchange_rates!/5" do
+    test "successfully converts between currencies given a list of rates" do
+      rates = single_forex_fixture()
+
+      assert Decimal.new("1.00000") == Currency.exchange_rates!(rates, 1, :eur, :eur)
+      assert Decimal.new("1.20210") == Currency.exchange_rates!(rates, 1, :gbp, :eur)
+      assert Decimal.new("1.00000") == Currency.exchange_rates!({:ok, rates}, 1, :eur, :eur)
     end
 
-    test "accepts format and rounding options" do
-      {:ok, result} = Currency.exchange(1, :eur, :usd, format: :string, round: 2)
-      assert is_binary(result)
-      assert String.match?(result, ~r/^\d+\.\d{2}$/)
+    test "successfully converts between currencies given a list of rates and format options" do
+      rates = single_forex_fixture()
+
+      assert "1.00000" == Currency.exchange_rates!(rates, 1, :eur, :eur, format: :string)
+      assert "1.20210" == Currency.exchange_rates!(rates, 1, :gbp, :eur, format: :string)
+
+      assert Decimal.new("1.00000") ==
+               Currency.exchange_rates!(rates, 1, :eur, :eur, format: :decimal)
+
+      assert Decimal.new("1.20210") ==
+               Currency.exchange_rates!(rates.rates, 1, :gbp, :eur, format: :decimal)
+
+      assert Decimal.new("1.20") ==
+               Currency.exchange_rates!(rates, 1, :gbp, :eur, format: :decimal, round: 2)
+
+      assert Decimal.new("1.00000") ==
+               Currency.exchange_rates!({:ok, rates}, 1, :eur, :eur, format: :decimal)
     end
 
-    test "returns the amount in the target currency given valid options" do
-      {:ok, usd_rate_value} = get_single_rate_fixture_value("USD")
-      {:ok, eur_rate_value} = get_single_rate_fixture_value("EUR", base: "USD")
+    test "raises an error on invalid exchanges" do
+      rates = single_forex_fixture()
 
-      assert Currency.exchange(1, "EUR", "USD", format: :string) ==
-               {:ok, usd_rate_value |> Decimal.round(5) |> Decimal.to_string()}
-
-      assert Currency.exchange(1, "EUR", "USD", format: :string, round: 2) ==
-               {:ok, usd_rate_value |> Decimal.round(2) |> Decimal.to_string()}
-
-      assert Currency.exchange(1, "USD", "EUR", format: :string, round: 2) ==
-               {:ok, eur_rate_value |> Decimal.round(2) |> Decimal.to_string()}
-    end
-
-    test "accepts atom currency codes" do
-      {:ok, decimal_result} = Currency.exchange(1, :EUR, :USD)
-      assert %Decimal{} = decimal_result
-    end
-
-    test "returns an error if the currency with the given iso code does not exist" do
-      refute Currency.exchange(1, "EUR", "XYZ", format: :string) == {:ok, "0.0000"}
-      refute Currency.exchange(1, "USD", "XYZ", format: :string) == {:ok, "0.0000"}
-      assert Currency.exchange(1, "EUR", "XYZ", format: :string) == {:error, :invalid_currency}
-    end
-  end
-
-  describe "exchange!/4" do
-    test "successfully converts between currencies" do
-      {:ok, usd_rate_value} = get_single_rate_fixture_value("USD")
-      result = Currency.exchange!(1, "EUR", "USD")
-      assert Decimal.eq?(result, usd_rate_value)
-    end
-
-    test "accepts format and rounding options" do
-      result = Currency.exchange!(1, "EUR", "USD", format: :string, round: 2)
-      assert is_binary(result)
-      assert String.match?(result, ~r/^\d+\.\d{2}$/)
-    end
-
-    test "accepts atom currency codes" do
-      decimal_result = Currency.exchange!(1, :EUR, :USD)
-      assert %Decimal{} = decimal_result
-    end
-
-    test "raises CurrencyError for invalid currencies" do
       assert_raise Forex.CurrencyError, fn ->
-        Currency.exchange!(100, "INVALID", "USD")
+        Currency.exchange_rates!(rates, nil, :eur, :usd)
       end
 
       assert_raise Forex.CurrencyError, fn ->
-        Currency.exchange!(100, "EUR", "INVALID")
-      end
-    end
-
-    test "raises FormatError for invalid amounts" do
-      assert_raise Forex.FormatError, fn ->
-        Currency.exchange!(nil, "EUR", "USD")
+        Currency.exchange_rates!(rates, [], :eur, :usd)
       end
 
-      assert_raise Decimal.Error, fn ->
-        Currency.exchange!("not_a_number", "EUR", "USD")
+      assert_raise Forex.CurrencyError, fn ->
+        Currency.exchange_rates!(rates, 1, nil, :usd)
+      end
+
+      assert_raise Forex.CurrencyError, fn ->
+        Currency.exchange_rates!(rates, 1, [], :usd)
       end
     end
   end
 
   describe "maybe_rebase/2" do
     setup do
-      rates = single_rate_fixture() |> List.first() |> Map.get(:rates)
+      rates = single_rates_fixture() |> List.first() |> Map.get(:rates)
 
       %{rates: rates}
     end

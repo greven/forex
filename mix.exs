@@ -103,8 +103,8 @@ defmodule Forex.MixProject do
       {:nimble_options, "~> 1.1"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.36", only: [:dev, :docs], runtime: false},
-      {:git_ops, "~> 2.6", only: [:dev], runtime: false}
+      {:ex_doc, "~> 0.40", only: [:dev, :docs], runtime: false},
+      {:git_ops, "~> 2.9", only: [:dev], runtime: false}
     ]
   end
 

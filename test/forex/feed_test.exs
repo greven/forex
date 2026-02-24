@@ -1,16 +1,9 @@
 defmodule Forex.FeedTest do
   use ExUnit.Case, async: true
 
-  import Forex.TestHelpers
   import Forex.FeedFixtures
 
   alias Forex.Feed
-
-  setup_all do
-    setup_test_cache()
-
-    :ok
-  end
 
   describe "base_url/0" do
     test "returns the base URL for the European Central Bank (ECB)" do
@@ -34,13 +27,13 @@ defmodule Forex.FeedTest do
 
   describe "api_mod/0" do
     test "returns the API adapter module" do
-      assert Feed.api_mod() == Forex.FeedAPIMock
+      assert Feed.api_mod() == Forex.FeedMock
     end
   end
 
   describe "latest_rates/1" do
     test "fetches the latest exchange rates from the European Central Bank (ECB)" do
-      assert Feed.latest_rates() == {:ok, single_rate_fixture()}
+      assert Feed.latest_rates() == {:ok, single_rates_fixture()}
       assert Feed.latest_rates(type: :error) == {:error, {Forex.FeedError, "Feed API Error"}}
     end
   end

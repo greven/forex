@@ -119,6 +119,7 @@ defmodule Forex.CacheMock do
 
   # Private helper functions
   defp expired?(_updated_at, :infinity), do: false
+  defp expired?(_updated_at, nil), do: false
   defp expired?(nil, _ttl), do: true
 
   defp expired?(updated_at, ttl) do

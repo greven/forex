@@ -1,21 +1,23 @@
 defmodule Forex.TestHelpers do
   @moduledoc """
-  Helper functions for setting up tests in the Forex application.
+  Shared test helpers for the Forex test suite.
   """
+
+  import ExUnit.Callbacks, only: [on_exit: 1]
 
   @doc """
-  Configure tests to use a mock cache module.
+  Initialises the configured cache module for the current test process
+  and registers a cleanup callback to terminate it when the test finishes.
+
+  When using `Forex.CacheMock` (the default in the test environment), the
+  cache is backed by the process dictionary, so each test process starts
+  with a clean slate automatically. This helper still calls `init/0` for
+  completeness and future-proofs against other cache implementations.
   """
   def setup_test_cache do
-    cache_module = Application.get_env(:forex, :cache_module)
-    Application.put_env(:forex, :cache_module, Forex.CacheMock)
+    Forex.Cache.cache_mod().init()
+    on_exit(fn -> Forex.Cache.cache_mod().terminate() end)
 
-    ExUnit.Callbacks.on_exit(fn ->
-      if cache_module do
-        Application.put_env(:forex, :cache_module, cache_module)
-      else
-        Application.delete_env(:forex, :cache_module)
-      end
-    end)
+    :ok
   end
 end
