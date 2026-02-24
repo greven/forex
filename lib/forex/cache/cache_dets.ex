@@ -7,16 +7,18 @@ defmodule Forex.Cache.DETS do
 
   @table :forex_cache
 
-  @default_file_path Path.join(:code.priv_dir(:forex), ".forex_cache")
-                     |> String.to_charlist()
-
-  @dets_file_path Application.compile_env(:forex, :dets_file_path, @default_file_path)
-
   @impl true
   def init do
-    {:ok, table_name} = :dets.open_file(@table, file: @dets_file_path)
+    path = dets_file_path()
+    path |> to_string() |> Path.dirname() |> File.mkdir_p!()
 
-    table_name
+    case :dets.open_file(@table, file: path) do
+      {:ok, table_name} ->
+        table_name
+
+      {:error, reason} ->
+        raise "Could not open DETS cache file #{inspect(to_string(path))}: #{inspect(reason)}"
+    end
   end
 
   @impl true
@@ -121,5 +123,15 @@ defmodule Forex.Cache.DETS do
 
   defp expired?(touched, ttl) do
     DateTime.diff(DateTime.utc_now(), touched, :millisecond) > ttl
+  end
+
+  defp default_file_path do
+    :code.priv_dir(:forex)
+    |> Path.join(".forex_cache")
+    |> String.to_charlist()
+  end
+
+  defp dets_file_path do
+    Application.get_env(:forex, :dets_file_path, default_file_path())
   end
 end
