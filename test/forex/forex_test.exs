@@ -551,7 +551,7 @@ defmodule ForexTest do
       {:ok, round_tripped} = Forex.exchange(1, "EUR", "USD")
 
       # EUR/USD * USD/EUR should be close to 1
-      product = Decimal.mult(eur_amount, usd_amount) |> Decimal.div(Decimal.new(10000))
+      product = Decimal.mult(eur_amount, usd_amount) |> Decimal.div(Decimal.new(10_000))
       assert Decimal.lt?(Decimal.abs(Decimal.sub(product, Decimal.new(1))), Decimal.new("0.01"))
 
       # The EUR/USD rate should be the reciprocal of USD/EUR
