@@ -7,12 +7,10 @@ defmodule Forex.Cache do
   responses from the `Forex.Feed` module.
 
   The default implementation uses ETS as the cache storage.
-  You can override the cache module by setting the `:cache_module` configuration
-  option in the `Forex.Fetcher` module options. For example:
+  You can override the cache module by setting the `:cache_module` configuration option:
 
   ```elixir
-  config :forex,
-    cache_module: MyApp.ForexCache
+  config :forex, cache_module: MyApp.ForexCache
   ```
   """
 
