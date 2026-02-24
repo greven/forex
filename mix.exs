@@ -86,6 +86,7 @@ defmodule Forex.MixProject do
       source_ref: @version,
       source_url: @source_url,
       canonical: "http://hexdocs.pm/forex",
+      assets: %{"priv/images" => "priv/images"},
       extras: [
         "README.md": [title: "Introduction"],
         "CHANGELOG.md": [title: "Changelog"],
