@@ -120,8 +120,9 @@ defmodule Forex.Fetcher.Supervisor do
   def start_fetcher(supervisor, opts) do
     {name, rest} = Keyword.pop(opts, :name)
     fetcher_opts = Options.fetcher_options(rest)
-    fetcher_opts = if name, do: Keyword.put(fetcher_opts, :name, name), else: fetcher_opts
-    Supervisor.start_child(supervisor, fetcher_spec(fetcher_opts))
+    opts = if name, do: Keyword.put(fetcher_opts, :name, name), else: fetcher_opts
+
+    Supervisor.start_child(supervisor, fetcher_spec(opts))
   end
 
   @doc """
