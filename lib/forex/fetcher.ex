@@ -87,6 +87,7 @@ defmodule Forex.Fetcher do
 
   @doc false
   def init(opts) do
+    Process.flag(:trap_exit, true)
     if opts[:use_cache], do: Cache.cache_mod().init()
 
     # Schedule the next refreshes
@@ -135,6 +136,11 @@ defmodule Forex.Fetcher do
     fetch_rates(:last_ninety_days_rates, opts)
     schedule_work(:last_ninety_days_rates, opts[:schedular_interval])
 
+    {:noreply, opts}
+  end
+
+  @doc false
+  def handle_info({:EXIT, _pid, _reason}, opts) do
     {:noreply, opts}
   end
 
