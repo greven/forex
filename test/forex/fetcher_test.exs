@@ -4,6 +4,7 @@ defmodule Forex.FetcherTest do
   import Forex.TestHelpers
   import Forex.FeedFixtures
 
+  alias Forex.Cache
   alias Forex.Fetcher
 
   describe "configuration and options" do
@@ -128,7 +129,7 @@ defmodule Forex.FetcherTest do
     setup do
       # Temporarily switch the cache module to DETS for this test group
       original = Application.get_env(:forex, :cache_module)
-      Application.put_env(:forex, :cache_module, Forex.Cache.DETS)
+      Application.put_env(:forex, :cache_module, Cache.DETS)
 
       on_exit(fn ->
         if original do
@@ -138,10 +139,10 @@ defmodule Forex.FetcherTest do
         end
 
         # Ensure DETS table is cleaned up
-        if Forex.Cache.DETS.initialized?(), do: Forex.Cache.DETS.reset()
+        if Cache.DETS.initialized?(), do: Cache.DETS.reset()
       end)
 
-      Forex.Cache.DETS.init()
+      Cache.DETS.init()
 
       :ok
     end
@@ -152,8 +153,8 @@ defmodule Forex.FetcherTest do
 
       # Pre-populate the DETS cache with fresh data
       now = DateTime.utc_now()
-      Forex.Cache.DETS.put(:latest_rates, "cached_rates", now)
-      Forex.Cache.DETS.put(:last_ninety_days_rates, "cached_90_rates", now)
+      Cache.DETS.put(:latest_rates, "cached_rates", now)
+      Cache.DETS.put(:last_ninety_days_rates, "cached_90_rates", now)
 
       # Use a feed_fn that always errors — the process must stay alive,
       # proving the feed was never invoked
@@ -174,8 +175,8 @@ defmodule Forex.FetcherTest do
       assert Process.alive?(pid)
 
       # Cache values remain unchanged (not replaced by a fresh fetch)
-      assert Forex.Cache.DETS.get(:latest_rates) == "cached_rates"
-      assert Forex.Cache.DETS.get(:last_ninety_days_rates) == "cached_90_rates"
+      assert Cache.DETS.get(:latest_rates) == "cached_rates"
+      assert Cache.DETS.get(:last_ninety_days_rates) == "cached_90_rates"
     end
 
     test "fetches from the feed when cached keys are expired" do
@@ -184,8 +185,8 @@ defmodule Forex.FetcherTest do
 
       # Pre-populate with stale data (2 seconds in the past, TTL = 1 ms)
       past = DateTime.add(DateTime.utc_now(), -2, :second)
-      Forex.Cache.DETS.put(:latest_rates, "stale_rates", past)
-      Forex.Cache.DETS.put(:last_ninety_days_rates, "stale_90_rates", past)
+      Cache.DETS.put(:latest_rates, "stale_rates", past)
+      Cache.DETS.put(:last_ninety_days_rates, "stale_90_rates", past)
 
       start_supervised!(%{
         id: sup_name,

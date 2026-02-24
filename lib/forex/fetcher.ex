@@ -187,7 +187,7 @@ defmodule Forex.Fetcher do
     cache_mod = Application.get_env(:forex, :cache_module, Forex.Cache.ETS)
 
     opts[:use_cache] and
-      cache_mod == Forex.Cache.DETS and
-      Forex.Cache.DETS.warm?(keys, opts[:schedular_interval])
+      cache_mod == Cache.DETS and
+      Cache.DETS.warm?(keys, opts[:schedular_interval])
   end
 end
