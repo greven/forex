@@ -5,6 +5,17 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.0.1](https://github.com/greven/forex.git/compare/v1.0.0...v1.0.1) (2026-02-24)
+
+
+
+
+### Bug Fixes:
+
+* exchange/4 by Nuno Freire
+
+* missing images on hex docs by Nuno Freire
+
 ## [v1.0.0](https://github.com/greven/forex.git/compare/v1.0.0...v1.0.0) (2026-02-24)
 
 
