@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.1.1](https://github.com/greven/forex.git/compare/v1.1.0...v1.1.1) (2026-02-24)
+
+
+
+
+### Bug Fixes:
+
+* :trap_exit in fetcher for grateful closing of DETS by Nuno Freire
+
 ## [v1.1.0](https://github.com/greven/forex.git/compare/v1.0.3...v1.1.0) (2026-02-24)
 
 
