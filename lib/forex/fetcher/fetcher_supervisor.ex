@@ -20,7 +20,23 @@ defmodule Forex.Fetcher.Supervisor do
 
   ## Client Interface
 
-  @doc false
+  @doc """
+  Starts the `Forex.Fetcher.Supervisor` process.
+
+  This function should be called in your application supervision tree to start
+  the Forex exchange rate fetcher.
+
+  ## Options
+
+  * `auto_start` - A boolean value that determines if the fetcher process should be started
+    automatically when the supervisor is started. The default value is `true`.
+
+  * `use_cache` - A boolean value that determines if the cache should be used.
+    The default value is `true`.
+
+  * `name` - The name to register the supervisor process under. Defaults to
+    `Forex.Fetcher.Supervisor`.
+  """
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
     options = Options.fetcher_supervisor_options(opts)

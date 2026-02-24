@@ -515,6 +515,7 @@ defmodule Forex do
   {:ok, Decimal.new("91.86100")}
   iex> Forex.exchange_historic_rate(~D[2023-01-01], 420, :eur, :gbp, format: :string)
   {:ok, "353.12760"}
+  ```
   """
   @spec exchange_historic_rate(
           date :: parsable_date(),
