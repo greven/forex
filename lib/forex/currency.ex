@@ -821,7 +821,7 @@ defmodule Forex.Currency do
   @spec map_exchange_rates(%{:currency => code(), :rate => String.t()}) ::
           %{String.t() => Decimal.t()}
   defp map_exchange_rates(rates) when is_map(rates) do
-    Map.put(rates, "EUR", "1.00000")
+    Map.put_new(rates, "EUR", "1.00000")
     |> Enum.map(fn {code, value} ->
       {Support.stringify_code(code), Support.format_value(value, :decimal)}
     end)

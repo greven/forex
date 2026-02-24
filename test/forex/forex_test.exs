@@ -530,6 +530,38 @@ defmodule ForexTest do
       assert {:error, _} = Forex.exchange(100, "INVALID", "USD")
       assert {:error, _} = Forex.exchange(100, "EUR", "INVALID")
     end
+
+    test "converts to EUR correctly" do
+      assert {:ok, usd_to_eur} = Forex.exchange(100, "USD", "EUR")
+      assert %Decimal{} = usd_to_eur
+      assert Decimal.gt?(usd_to_eur, Decimal.new(0))
+      refute Decimal.eq?(usd_to_eur, Decimal.new("1.00000"))
+
+      assert {:ok, gbp_to_eur} = Forex.exchange(100, "GBP", "EUR")
+      assert %Decimal{} = gbp_to_eur
+      assert Decimal.gt?(gbp_to_eur, Decimal.new(0))
+      refute Decimal.eq?(gbp_to_eur, Decimal.new("1.00000"))
+    end
+
+    test "converting to EUR and back approximates original amount" do
+      {:ok, eur_amount} = Forex.exchange(100, "USD", "EUR")
+      {:ok, usd_amount} = Forex.exchange(100, "EUR", "USD")
+
+      # USD -> EUR -> USD should round-trip close to 100
+      {:ok, round_tripped} = Forex.exchange(1, "EUR", "USD")
+
+      # EUR/USD * USD/EUR should be close to 1
+      product = Decimal.mult(eur_amount, usd_amount) |> Decimal.div(Decimal.new(10000))
+      assert Decimal.lt?(Decimal.abs(Decimal.sub(product, Decimal.new(1))), Decimal.new("0.01"))
+
+      # The EUR/USD rate should be the reciprocal of USD/EUR
+      refute Decimal.eq?(round_tripped, Decimal.new("1.00000"))
+    end
+
+    test "EUR to EUR returns the same amount" do
+      assert {:ok, amount} = Forex.exchange(100, "EUR", "EUR")
+      assert Decimal.eq?(amount, Decimal.new(100))
+    end
   end
 
   describe "exchange!/4" do
