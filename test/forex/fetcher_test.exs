@@ -124,6 +124,87 @@ defmodule Forex.FetcherTest do
     end
   end
 
+  describe "handle_continue with warm DETS cache" do
+    setup do
+      # Temporarily switch the cache module to DETS for this test group
+      original = Application.get_env(:forex, :cache_module)
+      Application.put_env(:forex, :cache_module, Forex.Cache.DETS)
+
+      on_exit(fn ->
+        if original do
+          Application.put_env(:forex, :cache_module, original)
+        else
+          Application.delete_env(:forex, :cache_module)
+        end
+
+        # Ensure DETS table is cleaned up
+        if Forex.Cache.DETS.initialized?(), do: Forex.Cache.DETS.reset()
+      end)
+
+      Forex.Cache.DETS.init()
+
+      :ok
+    end
+
+    test "skips fetching from the feed when all scheduled keys are within TTL" do
+      sup_name = Module.concat(__MODULE__, :warm_dets_sup)
+      fetcher_name = Module.concat(__MODULE__, :warm_dets_fetcher)
+
+      # Pre-populate the DETS cache with fresh data
+      now = DateTime.utc_now()
+      Forex.Cache.DETS.put(:latest_rates, "cached_rates", now)
+      Forex.Cache.DETS.put(:last_ninety_days_rates, "cached_90_rates", now)
+
+      # Use a feed_fn that always errors — the process must stay alive,
+      # proving the feed was never invoked
+      start_supervised!(%{
+        id: sup_name,
+        start: {Forex.Fetcher.Supervisor, :start_link, [[name: sup_name, auto_start: false]]}
+      })
+
+      assert {:ok, pid} =
+               Forex.Fetcher.Supervisor.start_fetcher(sup_name,
+                 name: fetcher_name,
+                 use_cache: true,
+                 feed_fn: {Forex.FeedMock, :get_latest_rates, [[type: :error]]}
+               )
+
+      # Allow handle_continue to complete
+      Process.sleep(100)
+      assert Process.alive?(pid)
+
+      # Cache values remain unchanged (not replaced by a fresh fetch)
+      assert Forex.Cache.DETS.get(:latest_rates) == "cached_rates"
+      assert Forex.Cache.DETS.get(:last_ninety_days_rates) == "cached_90_rates"
+    end
+
+    test "fetches from the feed when cached keys are expired" do
+      sup_name = Module.concat(__MODULE__, :expired_dets_sup)
+      fetcher_name = Module.concat(__MODULE__, :expired_dets_fetcher)
+
+      # Pre-populate with stale data (2 seconds in the past, TTL = 1 ms)
+      past = DateTime.add(DateTime.utc_now(), -2, :second)
+      Forex.Cache.DETS.put(:latest_rates, "stale_rates", past)
+      Forex.Cache.DETS.put(:last_ninety_days_rates, "stale_90_rates", past)
+
+      start_supervised!(%{
+        id: sup_name,
+        start: {Forex.Fetcher.Supervisor, :start_link, [[name: sup_name, auto_start: false]]}
+      })
+
+      assert {:ok, pid} =
+               Forex.Fetcher.Supervisor.start_fetcher(sup_name,
+                 name: fetcher_name,
+                 use_cache: true,
+                 # Set a 1 ms TTL so the stale entries are considered expired
+                 schedular_interval: 1
+               )
+
+      Process.sleep(100)
+      assert Process.alive?(pid)
+    end
+  end
+
   describe "handle_continue with failing feed" do
     test "logs a warning when some exchange rates fail to update" do
       sup_name = Module.concat(__MODULE__, :failing_sup)

@@ -98,16 +98,20 @@ defmodule Forex.Fetcher do
 
   @doc false
   def handle_continue(:init_schedule, opts) do
-    tasks = [
-      Task.async(fn -> fetch_rates(:latest_rates, opts) end),
-      Task.async(fn -> fetch_rates(:last_ninety_days_rates, opts) end)
-    ]
+    if dets_cache_warm?(@scheduled, opts) do
+      Logger.debug("Forex: Exchange rates loaded from cache.")
+    else
+      tasks = [
+        Task.async(fn -> fetch_rates(:latest_rates, opts) end),
+        Task.async(fn -> fetch_rates(:last_ninety_days_rates, opts) end)
+      ]
 
-    Task.await_many(tasks, 20_000)
-    |> Enum.all?(fn result -> match?({:ok, _}, result) end)
-    |> case do
-      true -> Logger.debug("Forex: Exchange rates updated!")
-      false -> Logger.warning("Forex: Some exchange rates failed to update!")
+      Task.await_many(tasks, 20_000)
+      |> Enum.all?(fn result -> match?({:ok, _}, result) end)
+      |> case do
+        true -> Logger.debug("Forex: Exchange rates updated!")
+        false -> Logger.warning("Forex: Some exchange rates failed to update!")
+      end
     end
 
     {:noreply, opts}
@@ -173,5 +177,17 @@ defmodule Forex.Fetcher do
         raise ArgumentError,
               "Invalid feed function option. Expected an MFA tuple or a function."
     end
+  end
+
+  # Returns true only when the configured cache module is Forex.Cache.DETS
+  # and all scheduled keys have non-expired entries within the current TTL.
+  #
+  # For any other cache module this always returns false.
+  defp dets_cache_warm?(keys, opts) do
+    cache_mod = Application.get_env(:forex, :cache_module, Forex.Cache.ETS)
+
+    opts[:use_cache] and
+      cache_mod == Forex.Cache.DETS and
+      Forex.Cache.DETS.warm?(keys, opts[:schedular_interval])
   end
 end

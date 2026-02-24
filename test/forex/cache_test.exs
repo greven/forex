@@ -178,6 +178,37 @@ defmodule Forex.CacheTest do
     test "terminates cache process", %{cache: cache} do
       assert :ok == cache.terminate()
     end
+
+    describe "warm?/2" do
+      setup %{cache: cache} do
+        cache.delete(:latest_rates)
+        cache.delete(:last_ninety_days_rates)
+        :ok
+      end
+
+      test "returns false when cache is empty", %{cache: cache} do
+        refute cache.warm?([:latest_rates, :last_ninety_days_rates], :timer.hours(12))
+      end
+
+      test "returns false when only some keys are present", %{cache: cache} do
+        cache.put(:latest_rates, "rates", DateTime.utc_now())
+        refute cache.warm?([:latest_rates, :last_ninety_days_rates], :timer.hours(12))
+      end
+
+      test "returns true when all keys are present and within TTL", %{cache: cache} do
+        now = DateTime.utc_now()
+        cache.put(:latest_rates, "rates", now)
+        cache.put(:last_ninety_days_rates, "rates", now)
+        assert cache.warm?([:latest_rates, :last_ninety_days_rates], :timer.hours(12))
+      end
+
+      test "returns false when all keys are present but expired", %{cache: cache} do
+        past = DateTime.add(DateTime.utc_now(), -2, :second)
+        cache.put(:latest_rates, "rates", past)
+        cache.put(:last_ninety_days_rates, "rates", past)
+        refute cache.warm?([:latest_rates, :last_ninety_days_rates], 1_000)
+      end
+    end
   end
 
   # Test Cache Module Interface

@@ -121,6 +121,18 @@ defmodule Forex.Cache.DETS do
     :dets.info(@table) != :undefined
   end
 
+  @doc """
+  Returns `true` if all given `keys` have non-expired entries in the cache
+  for the given `ttl` (in milliseconds).
+
+  This can be used to determine whether a startup fetch should be skipped
+  because the persisted cache is still fresh.
+  """
+  @spec warm?(keys :: [any()], ttl :: non_neg_integer()) :: boolean()
+  def warm?(keys, ttl) when is_list(keys) and is_integer(ttl) do
+    initialized?() and Enum.all?(keys, fn key -> get(key, ttl: ttl) != nil end)
+  end
+
   defp expired?(touched, ttl) do
     DateTime.diff(DateTime.utc_now(), touched, :millisecond) > ttl
   end
