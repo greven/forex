@@ -41,7 +41,7 @@ defmodule Forex do
 
   @doc """
   Returns the configured JSON encoding library for Forex.
-  The default is the `Jason` library.
+  The default is the Elixir built-in `JSON` module (it requires Elixir 1.18+).
 
   The JSON library must implement the `encode/1` function.
 
