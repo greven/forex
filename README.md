@@ -10,7 +10,7 @@
 
 [![hex.pm badge](https://img.shields.io/hexpm/v/forex?style=for-the-badge&labelColor=000)](https://hex.pm/packages/forex)
 [![Documentation badge](https://img.shields.io/badge/Docs-3B82F6?style=for-the-badge&labelColor=000)][DOCS]
-[![CI badge](https://img.shields.io/github/actions/workflow/status/greven/forex/ci.yml?style=for-the-badge&labelColor=000)](https://github.com/greven/forex/blob/main/.github/workflows/ci.yml)
+[![CI badge](https://img.shields.io/github/actions/workflow/status/greven/forex/main.yml?style=for-the-badge&labelColor=000)](https://github.com/greven/forex/blob/main/.github/workflows/main.yml)
 [![License badge](https://img.shields.io/hexpm/l/forex?style=for-the-badge&labelColor=000)](LICENSE)
 
 <!-- MDOC !-->
@@ -71,7 +71,6 @@ the `Forex.Feed.API` behaviour and pass it to the `Forex` module in your `config
 ```elixir
 config :forex, feed_api: MyApp.Forex.APIClient
 ```
-
 
 ## Usage
 
@@ -183,7 +182,6 @@ the `json_library` option in the `config.exs` file of your project:
 ```elixir
 config :forex, json_library: Jason
 ```
-
 
 ## Installation
 
