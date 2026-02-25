@@ -138,7 +138,7 @@ defmodule Forex.Cache.DETS do
   end
 
   defp default_file_path do
-    :code.priv_dir(:forex)
+    :filename.basedir(:user_cache, ~c"forex")
     |> Path.join(".forex_cache")
     |> String.to_charlist()
   end
