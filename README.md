@@ -53,7 +53,7 @@ to the `forex` dependency in your `mix.exs` file:
 ```elixir
 def deps do
   [
-    {:forex, "~> 1.1.1", runtime: false}
+    {:forex, "~> 1.1.2", runtime: false}
   ]
 end
 ```
@@ -190,7 +190,7 @@ The package can be installed by adding `forex` to your list of dependencies in `
 ```elixir
 def deps do
   [
-    {:forex, "~> 1.1.1"}
+    {:forex, "~> 1.1.2"}
   ]
 end
 ```

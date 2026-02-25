@@ -5,6 +5,15 @@ See [Conventional Commits](Https://conventionalcommits.org) for commit guideline
 
 <!-- changelog -->
 
+## [v1.1.2](https://github.com/greven/forex.git/compare/v1.1.1...v1.1.2) (2026-02-25)
+
+
+
+
+### Bug Fixes:
+
+* change default DETS file path by Nuno Freire
+
 ## [v1.1.1](https://github.com/greven/forex.git/compare/v1.1.0...v1.1.1) (2026-02-24)
 
 
