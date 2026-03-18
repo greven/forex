@@ -6,12 +6,20 @@ defmodule Forex.Cache do
   This module defines a simple caching layer behaviour to cache the
   responses from the `Forex.Feed` module.
 
-  The default implementation uses ETS as the cache storage.
-  You can override the cache module by setting the `:cache_module` configuration option:
+  The default implementation uses ETS as the cache storage (`Forex.Cache.ETS` adapter).
+  You can override the cache module by setting the `:cache_module` configuration option,
+  but it must implement the `Forex.Cache` behaviour. For example, to use a custom cache
+  module, you can set the configuration like this:
 
   ```elixir
   config :forex, cache_module: MyApp.ForexCache
   ```
+
+  There is also a `Forex.Cache.DETS` adapter that uses DETS for persistent storage,
+  which can be useful  for testing or if you want to  persist the cache across
+  application restarts. Take into consideration  that when using DETS, the
+  path to  the cache file must be a writable directory and the file will
+  be  created  if it does not exist.
   """
 
   @cache_mod Application.compile_env(:forex, :cache_module, Forex.Cache.ETS)
